@@ -297,28 +297,10 @@ export default function RadarView({
                 ? 'bg-amber-500/15 text-amber-500 border-amber-500/40'
                 : 'bg-blue-500/15 text-blue-500 border-blue-500/40 hover:bg-blue-500/25'
             }`}
-            title="Connect your browser GPS to test real physical proximity vs Hub fallback"
+            title="Connect your browser GPS for high-accuracy live proximity tracking"
           >
             <MapPin className="h-3.5 w-3.5" />
             {gpsStatus === 'active' ? '🎯 GPS Live (±6m)' : gpsStatus === 'locating' ? '⏳ Locating...' : gpsStatus === 'denied' ? '📍 GPS Off · Hub Mode' : '🎯 Connect Real GPS'}
-          </button>
-
-          <button
-            onClick={() => {
-              const next = !isSimulating200Plus;
-              setIsSimulating200Plus(next);
-              if (next) {
-                setSelectedRadius(1000);
-              }
-            }}
-            className={`px-3 py-1.5 rounded-xl text-xs font-black shrink-0 transition-all flex items-center gap-1.5 shadow-md ${
-              isSimulating200Plus
-                ? 'bg-[var(--accent-amber)] text-black ring-2 ring-amber-400 animate-pulse'
-                : 'bg-[var(--accent-purple)]/15 text-[var(--accent-purple)] border border-[var(--accent-purple)]/30 hover:bg-[var(--accent-purple)]/25'
-            }`}
-          >
-            <Flame className="h-3.5 w-3.5" />
-            {isSimulating200Plus ? '⚡ 214 Users Live! (Reset)' : '🧪 Simulate 200+ Users'}
           </button>
 
           <button
@@ -335,21 +317,30 @@ export default function RadarView({
       </div>
 
       {people.length === 0 && (
-        <div className="card p-4 border-2 border-[var(--accent)] bg-[var(--bg-elevated)]/90 shadow-xl space-y-2.5 animate-fade-in">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-black text-[var(--accent)] flex items-center gap-1.5">
-              ☁️ Cloud DB Connected (`0 profiles currently returned`)
-            </span>
+        <div className="card p-5 text-center bg-[var(--bg-elevated)] border border-[var(--border-subtle)] shadow-xl max-w-md mx-auto my-4 space-y-3 animate-fade-in">
+          <div className="h-12 w-12 rounded-2xl bg-[var(--accent)]/15 border border-[var(--accent)]/30 flex items-center justify-center mx-auto text-2xl shadow-sm">
+            🛰️
           </div>
+          <h3 className="text-base font-black text-[var(--text-primary)]">
+            Be the First Student on Radar here in {currentCity.name.split(' (')[0]}! 🚀
+          </h3>
           <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
-            Your Supabase `profiles` table is empty right now OR blocked by Postgres Row Level Security (RLS).
+            We are waiting for peers to check in across this exact radius. Broadcast your profile so nearby students can connect with you right now!
           </p>
-          <div className="p-3 rounded-xl bg-black/60 border border-white/15 font-mono text-[11px] text-green-400 select-all overflow-x-auto">
-            ALTER TABLE profiles DISABLE ROW LEVEL SECURITY;
+          <div className="flex items-center justify-center gap-2 pt-1">
+            <button
+              onClick={() => setIsBroadcasting(true)}
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-[var(--accent)] to-blue-600 text-white text-xs font-bold shadow-md hover:brightness-110 transition-all"
+            >
+              ⚡ Broadcast My Profile
+            </button>
+            <button
+              onClick={() => alert('Share link copied! Send to your coaching & hostel WhatsApp group to invite peers right to this radar.')}
+              className="px-4 py-2 rounded-xl bg-[var(--bg-card-solid)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-xs font-semibold hover:bg-[var(--border-hover)] transition-all"
+            >
+              📲 Invite Peers
+            </button>
           </div>
-          <p className="text-[11px] text-[var(--text-tertiary)]">
-            Copy the 1-line SQL command above, run it inside your Supabase SQL Editor (`loynm...`), and then refresh here to see real live profiles!
-          </p>
         </div>
       )}
 
@@ -381,11 +372,6 @@ export default function RadarView({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <h2 className="text-base font-bold text-[var(--text-primary)]">People Nearby</h2>
-              {isSimulating200Plus && (
-                <span className="badge bg-amber-500/20 text-amber-500 font-bold border border-amber-500/40">
-                  🔥 High Density Feed
-                </span>
-              )}
             </div>
             <span className="badge badge-blue font-bold">{filteredPeople.length} online</span>
           </div>

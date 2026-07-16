@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { X, Sparkles, MapPin, UserPlus, LogIn, CheckCircle2, ShieldCheck, Mail, Lock, User, Heart } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { X, Sparkles, MapPin, UserPlus, LogIn, CheckCircle2, ShieldCheck, Mail, Lock, User, Heart, Camera, Upload, RefreshCw, Check } from 'lucide-react';
 import { supabase } from '@/utils/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -23,6 +23,69 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated }: AuthMod
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
+  // Live Selfie & Photo Upload States
+  const [customAvatar, setCustomAvatar] = useState<string | null>(null);
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    let stream: MediaStream | null = null;
+    if (isCameraActive && videoRef.current) {
+      navigator.mediaDevices.getUserMedia({
+        video: { facingMode: facingMode }
+      }).then((s) => {
+        stream = s;
+        if (videoRef.current) {
+          videoRef.current.srcObject = s;
+        }
+      }).catch((err) => {
+        console.warn('Camera permission error:', err);
+        setErrorMsg('Camera access denied or unavailable. Please pick a photo from gallery instead.');
+        setIsCameraActive(false);
+      });
+    }
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [isCameraActive, facingMode]);
+
+  const handleSnapSelfie = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      canvas.width = video.videoWidth || 400;
+      canvas.height = video.videoHeight || 400;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        if (facingMode === 'user') {
+          ctx.translate(canvas.width, 0);
+          ctx.scale(-1, 1);
+        }
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        setCustomAvatar(dataUrl);
+        setIsCameraActive(false);
+      }
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setCustomAvatar(event.target.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -34,6 +97,10 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated }: AuthMod
     try {
       if (!supabase) {
         // Fallback if Supabase keys are still local
+        const defaultAvatar = gender === 'Girls'
+          ? 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop&q=80'
+          : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80';
+
         const mockProfile = {
           id: `user-${Date.now()}`,
           full_name: fullName || 'Verified Student',
@@ -44,6 +111,7 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated }: AuthMod
           lat: 23.3645,
           lng: 85.3195,
           status: 'Online',
+          avatar_url: customAvatar || defaultAvatar,
         };
         localStorage.setItem('stay_dine_user_profile', JSON.stringify(mockProfile));
         if (onProfileCreated) onProfileCreated(mockProfile);
@@ -53,6 +121,10 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated }: AuthMod
       }
 
       if (mode === 'signup') {
+        const defaultAvatar = gender === 'Girls'
+          ? 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop&q=80'
+          : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80';
+
         // 1. Sign Up User via Supabase Auth
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email: email.trim(),
@@ -72,9 +144,7 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated }: AuthMod
           lat: 23.3645 + (Math.random() - 0.5) * 0.01,
           lng: 85.3195 + (Math.random() - 0.5) * 0.01,
           status: 'Online',
-          avatar_url: gender === 'Girls'
-            ? 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop&q=80'
-            : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+          avatar_url: customAvatar || defaultAvatar,
         };
 
         // 2. Insert into Supabase Profiles Table
@@ -121,173 +191,305 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated }: AuthMod
   };
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/65 backdrop-blur-sm animate-fade-in"
-         onClick={onClose}>
+    <div
+      className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in font-outfit"
+      onClick={onClose}
+    >
       <motion.div
-        initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }}
+        initial={{ scale: 0.92, opacity: 0, y: 24 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.92, opacity: 0, y: 24 }}
+        transition={{ type: 'spring', stiffness: 350, damping: 28 }}
         onClick={(e) => e.stopPropagation()}
-        className="card p-6 border-2 border-[var(--accent)] shadow-2xl relative w-full max-w-md bg-[var(--bg-card-solid)] overflow-hidden max-h-[92vh] overflow-y-auto"
+        className="relative w-full max-w-md p-[1.5px] rounded-[28px] bg-gradient-to-b from-indigo-500/60 via-purple-500/30 to-pink-500/20 shadow-[0_20px_60px_-15px_rgba(124,58,237,0.4)] overflow-hidden"
       >
-        <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[var(--accent)] via-purple-500 to-blue-500" />
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-2 rounded-xl bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:text-white hover:bg-red-500/20 transition-all"
-        >
-          <X className="h-5 w-5" />
-        </button>
+        <div className="relative w-full rounded-[27px] bg-[#090c15]/95 p-6 sm:p-7 backdrop-blur-xl overflow-y-auto max-h-[90vh]">
+          {/* Top glowing ambient accent */}
+          <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-64 h-32 bg-gradient-to-r from-purple-600/30 via-indigo-600/30 to-pink-600/30 blur-3xl pointer-events-none" />
 
-        <div className="text-center mt-1">
-          <div className="h-12 w-12 rounded-2xl bg-[var(--accent)]/15 border border-[var(--accent)]/30 flex items-center justify-center mx-auto mb-2 shadow-sm">
-            <ShieldCheck className="h-6 w-6 text-[var(--accent)]" />
-          </div>
-          <h3 className="text-xl font-black text-[var(--text-primary)]">
-            {mode === 'signup' ? 'Create Student Profile 🚀' : 'Sign In to Your Account'}
-          </h3>
-          <p className="text-xs text-[var(--text-secondary)] mt-1">
-            {mode === 'signup' ? 'Join thousands of peers across Ranchi & Patna' : 'Welcome back to your PeopleMeet Radar'}
-          </p>
-        </div>
-
-        {/* Tab switcher */}
-        <div className="flex rounded-xl bg-[var(--bg-elevated)] p-1 my-4 border border-[var(--border-subtle)]">
           <button
-            type="button"
-            onClick={() => setMode('signup')}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
-              mode === 'signup' ? 'bg-[var(--accent)] text-white shadow-md' : 'text-[var(--text-secondary)] hover:text-white'
-            }`}
+            onClick={onClose}
+            className="absolute top-4 right-4 p-2.5 rounded-full bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 hover:rotate-90 transition-all duration-300 z-10 border border-white/10"
+            title="Close"
           >
-            New Profile ✨
+            <X className="h-4 w-4" />
           </button>
-          <button
-            type="button"
-            onClick={() => setMode('login')}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
-              mode === 'login' ? 'bg-[var(--accent)] text-white shadow-md' : 'text-[var(--text-secondary)] hover:text-white'
-            }`}
-          >
-            Sign In 🔑
-          </button>
-        </div>
 
-        {errorMsg && (
-          <div className="p-3 rounded-xl bg-red-500/15 border border-red-500/30 text-red-400 text-xs font-semibold mb-3">
-            ⚠️ {errorMsg}
+          <div className="text-center mt-1 relative z-10">
+            <div className="h-14 w-14 rounded-2xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-600 p-[1.5px] shadow-lg shadow-purple-500/30 mx-auto mb-3 flex items-center justify-center">
+              <div className="h-full w-full rounded-[14px] bg-[#090c15] flex items-center justify-center">
+                <Sparkles className="h-6 w-6 text-purple-400 animate-pulse" />
+              </div>
+            </div>
+            <h3 className="text-2xl font-black text-white tracking-tight">
+              {mode === 'signup' ? 'Join PeopleMeet 🚀' : 'Welcome Back ✨'}
+            </h3>
+            <p className="text-xs text-slate-400 font-medium mt-1">
+              {mode === 'signup'
+                ? 'Discover peers, verified PGs, and study partners around you'
+                : 'Sign in to access your live campus proximity radar'}
+            </p>
           </div>
-        )}
 
-        {successMsg && (
-          <div className="p-3 rounded-xl bg-green-500/15 border border-green-500/30 text-green-400 text-xs font-semibold mb-3 flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4 shrink-0" /> {successMsg}
+          {/* Premium Tab Switcher */}
+          <div className="flex rounded-2xl bg-black/40 p-1.5 my-5 border border-white/10 relative z-10 backdrop-blur-md">
+            <button
+              type="button"
+              onClick={() => setMode('signup')}
+              className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all duration-200 flex items-center justify-center gap-1.5 ${
+                mode === 'signup'
+                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-purple-500/25 scale-[1.02]'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <UserPlus className="h-3.5 w-3.5" /> New Profile
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('login')}
+              className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all duration-200 flex items-center justify-center gap-1.5 ${
+                mode === 'login'
+                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-purple-500/25 scale-[1.02]'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <LogIn className="h-3.5 w-3.5" /> Sign In
+            </button>
           </div>
-        )}
 
-        <form onSubmit={handleSubmit} className="space-y-3.5">
-          {mode === 'signup' && (
-            <>
-              <div>
-                <label className="block text-xs font-bold text-[var(--text-secondary)] mb-1">Your Full Name</label>
-                <div className="relative">
-                  <User className="absolute left-3 top-2.5 h-4 w-4 text-[var(--text-tertiary)]" />
+          {errorMsg && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="p-3.5 rounded-xl bg-red-500/15 border border-red-500/40 text-red-300 text-xs font-semibold mb-4 flex items-center gap-2"
+            >
+              <span className="text-sm">⚠️</span> {errorMsg}
+            </motion.div>
+          )}
+
+          {successMsg && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="p-3.5 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-xs font-semibold mb-4 flex items-center gap-2 shadow-lg shadow-emerald-500/10"
+            >
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" /> {successMsg}
+            </motion.div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4 relative z-10">
+            {mode === 'signup' && (
+              <>
+                {/* Live Selfie & Gallery Photo Upload Studio */}
+                <div className="p-3.5 rounded-2xl bg-black/40 border border-white/10 space-y-3 shadow-inner">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <span>Profile Photo</span>
+                      <span className="text-[10px] text-purple-400 font-normal">(`Selfie or Upload`)</span>
+                    </label>
+                    {customAvatar && (
+                      <button
+                        type="button"
+                        onClick={() => setCustomAvatar(null)}
+                        className="text-[10px] text-red-400 hover:underline font-semibold"
+                      >
+                        Reset to Default
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="relative h-14 w-14 rounded-2xl overflow-hidden shrink-0 border-2 border-purple-500/50 bg-[#090c15] shadow-md flex items-center justify-center">
+                      {customAvatar ? (
+                        <img src={customAvatar} alt="preview" className="h-full w-full object-cover" />
+                      ) : (
+                        <img
+                          src={gender === 'Girls' ? 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop&q=80' : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80'}
+                          alt="default"
+                          className="h-full w-full object-cover opacity-70"
+                        />
+                      )}
+                    </div>
+
+                    <div className="flex-1 grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsCameraActive(!isCameraActive)}
+                        className="py-2 px-2.5 rounded-xl bg-gradient-to-r from-purple-600/30 to-indigo-600/30 hover:from-purple-600/50 hover:to-indigo-600/50 border border-purple-500/30 text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm"
+                      >
+                        <Camera className="h-3.5 w-3.5 text-purple-400 shrink-0" />
+                        <span className="truncate">{isCameraActive ? 'Close Camera' : 'Live Selfie'}</span>
+                      </button>
+
+                      <label className="py-2 px-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm">
+                        <Upload className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
+                        <span className="truncate">Upload Photo</span>
+                        <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* HTML5 Live Camera Video Stream & Controls */}
+                  <AnimatePresence>
+                    {isCameraActive && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="overflow-hidden space-y-2 pt-2 border-t border-white/10"
+                      >
+                        <div className="relative rounded-2xl overflow-hidden bg-black aspect-video border border-purple-500/40 shadow-inner flex items-center justify-center max-h-44 mx-auto">
+                          <video
+                            ref={videoRef}
+                            autoPlay
+                            playsInline
+                            muted
+                            className={`w-full h-full object-cover ${facingMode === 'user' ? 'scale-x-[-1]' : ''}`}
+                          />
+                        </div>
+                        <canvas ref={canvasRef} className="hidden" />
+
+                        <div className="flex items-center justify-between gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setFacingMode(facingMode === 'user' ? 'environment' : 'user')}
+                            className="flex-1 py-1.5 px-3 rounded-xl bg-white/10 hover:bg-white/15 text-slate-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all border border-white/10"
+                          >
+                            <RefreshCw className="h-3 w-3 text-cyan-400" />
+                            <span>Flip ({facingMode === 'user' ? 'Selfie' : 'Back'})</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleSnapSelfie}
+                            className="flex-1 py-1.5 px-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:brightness-110 text-white text-xs font-black flex items-center justify-center gap-1.5 transition-all shadow-md shadow-emerald-500/20"
+                          >
+                            <Check className="h-3.5 w-3.5" />
+                            <span>Snap Photo</span>
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                    Your Full Name
+                  </label>
+                  <div className="relative group">
+                    <User className="absolute left-3.5 top-3 h-4 w-4 text-slate-500 group-focus-within:text-purple-400 transition-colors" />
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Vikram Kumar"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 text-sm bg-black/50 border border-white/10 rounded-xl text-white font-medium placeholder:text-slate-600 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                      Gender
+                    </label>
+                    <select
+                      value={gender}
+                      onChange={(e: any) => setGender(e.target.value)}
+                      className="w-full px-3.5 py-2.5 text-xs bg-black/50 border border-white/10 rounded-xl text-white font-semibold focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all cursor-pointer"
+                    >
+                      <option value="Boys" className="bg-[#090c15]">Boys / Male</option>
+                      <option value="Girls" className="bg-[#090c15]">Girls / Female</option>
+                      <option value="Others" className="bg-[#090c15]">Others</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                      Locality / Hub
+                    </label>
+                    <select
+                      value={locality}
+                      onChange={(e) => setLocality(e.target.value)}
+                      className="w-full px-3.5 py-2.5 text-xs bg-black/50 border border-white/10 rounded-xl text-white font-semibold focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all cursor-pointer"
+                    >
+                      <option value="Lalpur Chowk" className="bg-[#090c15]">📍 Lalpur Chowk</option>
+                      <option value="Kanke Road" className="bg-[#090c15]">📍 Kanke Road</option>
+                      <option value="Boring Road" className="bg-[#090c15]">📍 Boring Road</option>
+                      <option value="Ashok Rajpath" className="bg-[#090c15]">📍 Ashok Rajpath</option>
+                      <option value="BIT Mesra Hub" className="bg-[#090c15]">📍 BIT Mesra Hub</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                    Exam & About Bio (`What do you need?`)
+                  </label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Vikram Kumar"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    className="input w-full pl-9 py-2 text-sm bg-[var(--bg-elevated)] border-[var(--border-subtle)] rounded-xl text-[var(--text-primary)] font-semibold"
+                    placeholder="e.g. BPSC Target 2026. Looking for room partner near library!"
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    className="w-full px-4 py-2.5 text-xs bg-black/50 border border-white/10 rounded-xl text-white font-medium placeholder:text-slate-600 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
                   />
                 </div>
-              </div>
+              </>
+            )}
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-[var(--text-secondary)] mb-1">Gender</label>
-                  <select
-                    value={gender}
-                    onChange={(e: any) => setGender(e.target.value)}
-                    className="input w-full py-2 text-xs bg-[var(--bg-elevated)] border-[var(--border-subtle)] rounded-xl text-[var(--text-primary)] font-semibold"
-                  >
-                    <option value="Boys">Boys / Male</option>
-                    <option value="Girls">Girls / Female</option>
-                    <option value="Others">Others</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-[var(--text-secondary)] mb-1">Locality / Hub</label>
-                  <select
-                    value={locality}
-                    onChange={(e) => setLocality(e.target.value)}
-                    className="input w-full py-2 text-xs bg-[var(--bg-elevated)] border-[var(--border-subtle)] rounded-xl text-[var(--text-primary)] font-semibold"
-                  >
-                    <option value="Lalpur Chowk">📍 Lalpur Chowk</option>
-                    <option value="Kanke Road">📍 Kanke Road</option>
-                    <option value="Boring Road">📍 Boring Road</option>
-                    <option value="Ashok Rajpath">📍 Ashok Rajpath</option>
-                    <option value="BIT Mesra Hub">📍 BIT Mesra Hub</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-[var(--text-secondary)] mb-1">Exam & About Bio (`What do you need?`)</label>
+            <div>
+              <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                Email Address (`or Student ID`)
+              </label>
+              <div className="relative group">
+                <Mail className="absolute left-3.5 top-3 h-4 w-4 text-slate-500 group-focus-within:text-purple-400 transition-colors" />
                 <input
-                  type="text"
+                  type="email"
                   required
-                  placeholder="e.g. BPSC Target 2026. Looking for room partner near library!"
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  className="input w-full py-2 text-xs bg-[var(--bg-elevated)] border-[var(--border-subtle)] rounded-xl text-[var(--text-primary)] font-medium"
+                  placeholder="you@gmail.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 text-sm bg-black/50 border border-white/10 rounded-xl text-white font-semibold placeholder:text-slate-600 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
                 />
               </div>
-            </>
-          )}
-
-          <div>
-            <label className="block text-xs font-bold text-[var(--text-secondary)] mb-1">Email Address (`or Student ID`)</label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-2.5 h-4 w-4 text-[var(--text-tertiary)]" />
-              <input
-                type="email"
-                required
-                placeholder="you@gmail.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="input w-full pl-9 py-2 text-sm bg-[var(--bg-elevated)] border-[var(--border-subtle)] rounded-xl text-[var(--text-primary)] font-semibold"
-              />
             </div>
-          </div>
 
-          <div>
-            <label className="block text-xs font-bold text-[var(--text-secondary)] mb-1">Password</label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-2.5 h-4 w-4 text-[var(--text-tertiary)]" />
-              <input
-                type="password"
-                required
-                placeholder="Min 6 characters"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="input w-full pl-9 py-2 text-sm bg-[var(--bg-elevated)] border-[var(--border-subtle)] rounded-xl text-[var(--text-primary)] font-semibold"
-              />
+            <div>
+              <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                Password
+              </label>
+              <div className="relative group">
+                <Lock className="absolute left-3.5 top-3 h-4 w-4 text-slate-500 group-focus-within:text-purple-400 transition-colors" />
+                <input
+                  type="password"
+                  required
+                  placeholder="Min 6 characters"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 text-sm bg-black/50 border border-white/10 rounded-xl text-white font-semibold placeholder:text-slate-600 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
+                />
+              </div>
             </div>
-          </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3.5 mt-2 rounded-xl bg-gradient-to-r from-[var(--accent)] to-blue-600 text-white text-sm font-black shadow-lg hover:brightness-110 active:scale-98 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {loading ? (
-              <span className="animate-spin text-lg">⏳</span>
-            ) : mode === 'signup' ? (
-              <><UserPlus className="h-4 w-4" /> Create Profile & Go Live on Radar ⚡</>
-            ) : (
-              <><LogIn className="h-4 w-4" /> Sign In to PeopleMeet 🎯</>
-            )}
-          </button>
-        </form>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3.5 mt-3 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white text-sm font-black shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-[1.01] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2 border border-white/15"
+            >
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <span className="animate-spin text-base">⏳</span> Connecting to Radar...
+                </span>
+              ) : mode === 'signup' ? (
+                <><UserPlus className="h-4 w-4" /> Create Profile & Go Live on Radar ⚡</>
+              ) : (
+                <><LogIn className="h-4 w-4" /> Sign In to PeopleMeet 🎯</>
+              )}
+            </button>
+          </form>
+        </div>
       </motion.div>
     </div>
   );

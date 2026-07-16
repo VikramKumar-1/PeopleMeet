@@ -1,6 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Outfit } from "next/font/google";
 import "./globals.css";
+
+const outfit = Outfit({
+  subsets: ["latin"],
+  variable: "--font-outfit",
+  display: "swap",
+});
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,13 +19,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Stay & Dine — Find People, PGs, Flats & Tiffin Near You",
+  title: "PeopleMeet / Zingly — Live Student & Campus Radar",
   description: "Live proximity radar to find students, verified PGs, flats & tiffin centers across Patna, Ranchi & Delhi.",
-  applicationName: "Stay&Dine",
+  applicationName: "PeopleMeet",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Stay&Dine",
+    title: "PeopleMeet",
   },
 };
 
@@ -38,10 +44,10 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} antialiased dark`}
+      className={`${outfit.variable} ${outfit.className} ${geistSans.variable} ${geistMono.variable} antialiased dark`}
       suppressHydrationWarning
     >
-      <body className="min-h-screen">
+      <body className={`min-h-screen ${outfit.className}`}>
         {children}
       </body>
     </html>

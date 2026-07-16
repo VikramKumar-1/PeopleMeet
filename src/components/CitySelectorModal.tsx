@@ -114,7 +114,7 @@ export default function CitySelectorModal({
             <div className="flex items-start gap-2">
               <ShieldCheck className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
               <span>
-                <strong>Automatic 100m Proximity Default:</strong> Wherever your live GPS or simulated walk is inside {currentCity?.name || 'your city'}, the radar defaults to exactly <strong className="text-white">100 meters</strong> around you.
+                <strong>Automatic 100m Proximity Default:</strong> Wherever your live GPS coordinate is inside {currentCity?.name || 'your city'}, the radar defaults to exactly <strong className="text-white">100 meters</strong> around you.
               </span>
             </div>
             <div className="flex items-start gap-2">

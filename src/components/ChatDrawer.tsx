@@ -107,7 +107,7 @@ export default function ChatDrawer({
                 {/* Messages Body */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-3">
                   <div className="text-center py-2 text-[11px] text-slate-500 bg-slate-900/40 rounded-xl border border-slate-800/60 mx-4">
-                    ⚡ Supabase Realtime Broadcast active. Messages are end-to-end simulated.
+                    ⚡ Supabase Realtime active. Messages are peer-to-peer instant.
                   </div>
 
                   {messages.map((msg) => {
