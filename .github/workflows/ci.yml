@@ -1,0 +1,33 @@
+name: Next.js CI/CD Build Check ✅
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository Code 📦
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment ⚡
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies 🛠️
+        run: npm install --legacy-peer-deps
+
+      - name: Run TypeScript Verification Check 🔍
+        run: npx tsc --noEmit
+
+      - name: Build Next.js Production Bundle 🚀
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://loynmwmaujdauqzamjkc.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.dummy_key_for_ci_build
+        run: npm run build
