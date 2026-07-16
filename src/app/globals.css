@@ -1,0 +1,247 @@
+@import "tailwindcss";
+
+/* ─── Design Tokens ─────────────────────────────────────── */
+:root {
+  /* Light mode */
+  --bg-primary: #f5f6f8;
+  --bg-card: rgba(255, 255, 255, 0.72);
+  --bg-card-solid: #ffffff;
+  --bg-elevated: #f0f1f4;
+  --bg-surface: #e8eaee;
+  --border-subtle: rgba(0, 0, 0, 0.06);
+  --border-hover: rgba(0, 0, 0, 0.12);
+  --text-primary: #0f1419;
+  --text-secondary: #536471;
+  --text-tertiary: #8899a6;
+  --accent: #0a84ff;
+  --accent-green: #34c759;
+  --accent-purple: #af52de;
+  --accent-amber: #ff9f0a;
+  --glass-bg: rgba(255, 255, 255, 0.75);
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04);
+  --shadow-elevated: 0 4px 24px rgba(0,0,0,0.08);
+  --pattern-opacity: 0.18;
+}
+
+.dark {
+  --bg-primary: #07090f;
+  --bg-card: rgba(17, 22, 35, 0.72);
+  --bg-card-solid: #0d1117;
+  --bg-elevated: #161b22;
+  --bg-surface: #1c2333;
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-hover: rgba(255, 255, 255, 0.14);
+  --text-primary: #f0f6fc;
+  --text-secondary: #8b949e;
+  --text-tertiary: #6e7681;
+  --accent: #58a6ff;
+  --accent-green: #3fb950;
+  --accent-purple: #bc8cff;
+  --accent-amber: #d29922;
+  --glass-blur: 24px;
+  --glass-bg: rgba(13, 17, 23, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.2);
+  --shadow-elevated: 0 8px 32px rgba(0,0,0,0.4);
+  --pattern-opacity: 0.14;
+}
+
+@theme inline {
+  --color-background: var(--bg-primary);
+  --color-foreground: var(--text-primary);
+  --font-sans: var(--font-geist-sans), system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: var(--font-geist-mono), monospace;
+}
+
+/* ─── Base ──────────────────────────────────────────────── */
+html {
+  background-color: var(--bg-primary);
+  scroll-behavior: smooth;
+  transition: background-color 0.3s ease;
+  min-height: 100vh;
+}
+
+body {
+  background-color: transparent !important;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-font-smoothing: antialiased;
+  transition: color 0.3s ease;
+  position: relative;
+}
+
+/* ─── Indian Telegram Campus Doodle Background Pattern ──── */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: var(--pattern-opacity, 0.28);
+  background-image: url("data:image/svg+xml,%3Csvg width='200' height='200' viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%230a84ff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 30 h18 l-3 18 h-12 z M26 23 c0-3 2-3 2-6 M31 23 c0-3 2-3 2-6' /%3E%3Cpath d='M130 15 h18 v5 h-18 z M132 20 h14 v10 h-14 z M132 30 h14 v10 h-14 z M132 40 h14 v10 h-14 z M128 20 v30 M150 20 v30 M136 11 h6 c2 0 3 1 3 4' /%3E%3Ccircle cx='95' cy='95' r='16' /%3E%3Cpath d='M89 88 h12 M89 93 h12 M89 88 c3 0 6 1 6 4 s-3 4-6 4 l9 10' /%3E%3Cpath d='M20 150 c4-2 10-2 14 0 v16 c-4-2-10-2-14 0 z M34 150 c4-2 10-2 14 0 v16 c-4-2-10-2-14 0 z M34 150 v16' /%3E%3Cpath d='M145 135 c-6 0-10 4-10 10 c0 7 10 18 10 18 s10-11 10-18 c0-6-4-10-10-10 z' /%3E%3Ccircle cx='145' cy='145' r='3.5' /%3E%3Cpath d='M80 32 c0-7 7-12 15-12 s15 5 15 12 c0 5-4 9-10 11 l-5 4 v-4 c-4-1-7-5-7-11 z' /%3E%3Ccircle cx='80' cy='168' r='5' /%3E%3Ccircle cx='105' cy='168' r='5' /%3E%3Cpath d='M75 168 h-3 v-10 l8-6 h16 l5 10 h6 v6 h-5 M85 168 h15' /%3E%3Ccircle cx='165' cy='80' r='7' /%3E%3Cpath d='M160 85 l-12 12 v3 h3 v-3 h3 l5-5' /%3E%3Cpath d='M25 98 l8-15 l8 15 z M21 98 h24 c0 6-5 10-12 10 s-12-4-12-10 z' /%3E%3Cpath d='M65 65 l2 4 l4 2 l-4 2 l-2 4 l-2-4 l-4-2 l4-2 z' /%3E%3Cpath d='M175 175 l1.5 3.5 l3.5 1.5 l-3.5 1.5 l-1.5 3.5 l-1.5-3.5 l-3.5-1.5 l3.5-1.5 z' /%3E%3Ccircle cx='115' cy='130' r='1.5' /%3E%3Ccircle cx='60' cy='120' r='1.5' /%3E%3Ccircle cx='175' cy='45' r='1.5' /%3E%3C/g%3E%3C/svg%3E");
+  background-size: 200px 200px;
+  background-repeat: repeat;
+  transition: opacity 0.3s ease;
+}
+
+/* ─── Global Clickable Hand Cursor ───────────────────────── */
+button,
+a,
+input[type="button"],
+input[type="submit"],
+[role="button"],
+.chip,
+.segment-btn,
+.cursor-pointer,
+button * {
+  cursor: pointer !important;
+}
+
+button:disabled,
+button[disabled] {
+  cursor: not-allowed !important;
+  opacity: 0.65;
+}
+
+/* ─── Safe Area ─────────────────────────────────────────── */
+.pt-safe { padding-top: env(safe-area-inset-top, 0px); }
+.pb-safe { padding-bottom: env(safe-area-inset-bottom, 6px); }
+
+/* ─── Scrollbar Hide ────────────────────────────────────── */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ─── Radar Sweep ───────────────────────────────────────── */
+@keyframes radarSweep {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.radar-sweep-line {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg at 50% 50%,
+    color-mix(in srgb, var(--accent) 50%, transparent) 0deg,
+    color-mix(in srgb, var(--accent) 12%, transparent) 40deg,
+    transparent 90deg,
+    transparent 360deg
+  );
+  animation: radarSweep 4s linear infinite;
+  pointer-events: none;
+}
+
+/* ─── Glassmorphism Card ────────────────────────────────── */
+.card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-card);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.3s ease;
+}
+
+.card:hover {
+  border-color: var(--border-hover);
+  box-shadow: var(--shadow-elevated);
+}
+
+.card-elevated {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  transition: background 0.3s ease;
+}
+
+/* ─── Chip (Filter Pill) ────────────────────────────────── */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  cursor: pointer;
+  user-select: none;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+}
+
+.chip:active { transform: scale(0.95); }
+
+.chip-active {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+/* ─── Segment Control ───────────────────────────────────── */
+.segment-bar {
+  display: flex;
+  background: var(--bg-card-solid);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.segment-btn {
+  flex: 1;
+  padding: 8px 0;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--text-secondary);
+  transition: all 0.15s ease;
+  cursor: pointer;
+  user-select: none;
+  border: none;
+  background: transparent;
+}
+
+.segment-btn:active { transform: scale(0.97); }
+
+.segment-btn-active {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+}
+
+/* ─── Badge ─────────────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.badge-prime {
+  background: linear-gradient(135deg, #d29922 0%, #e3b341 100%);
+  color: #000;
+}
+
+.badge-green {
+  background: color-mix(in srgb, var(--accent-green) 15%, transparent);
+  color: var(--accent-green);
+}
+
+.badge-blue {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+}
