@@ -13,7 +13,7 @@ import AccountView from '@/components/views/AccountView';
 import { CITIES, RADAR_PEOPLE, PG_LISTINGS, FLAT_LISTINGS, TIFFIN_LISTINGS } from '@/data/mockData';
 import { isSupabaseReady, fetchLiveProfiles, seedInitialSupabaseData, supabase } from '@/utils/supabase';
 import { CityHub, RadarPerson, ChatMessage } from '@/types';
-import { CheckCircle2, X } from 'lucide-react';
+import { CheckCircle2, X, MapPin } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Home() {
