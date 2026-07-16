@@ -86,6 +86,58 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated }: AuthMod
     }
   };
 
+  const [detectingLocality, setDetectingLocality] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && typeof window !== 'undefined') {
+      const saved = localStorage.getItem('stay_dine_user_profile');
+      if (saved) {
+        try {
+          const profile = JSON.parse(saved);
+          if (profile.full_name) setFullName(profile.full_name);
+          if (profile.gender) setGender(profile.gender);
+          if (profile.locality_hub) setLocality(profile.locality_hub);
+          if (profile.bio) setBio(profile.bio);
+          if (profile.avatar_url) setCustomAvatar(profile.avatar_url);
+        } catch (e) {}
+      }
+    }
+  }, [isOpen]);
+
+  const handleDetectLocality = () => {
+    if (!navigator.geolocation) {
+      setErrorMsg('Geolocation is not supported by your browser.');
+      return;
+    }
+    setDetectingLocality(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=16`);
+          const data = await res.json();
+          if (data && data.address) {
+            const area = data.address.suburb || data.address.neighbourhood || data.address.residential || data.address.road || data.address.city_district || 'Live GPS Hub';
+            const city = data.address.city || data.address.town || data.address.state_district || '';
+            setLocality(`${area}${city ? `, ${city}` : ''}`);
+          } else {
+            setLocality(`GPS (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`);
+          }
+        } catch (err) {
+          setLocality(`Live Hub (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`);
+        } finally {
+          setDetectingLocality(false);
+        }
+      },
+      (err) => {
+        console.warn('GPS location error:', err);
+        setErrorMsg('Could not detect location automatically. Please type your locality below.');
+        setDetectingLocality(false);
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  };
+
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -93,6 +145,37 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated }: AuthMod
     setLoading(true);
     setErrorMsg(null);
     setSuccessMsg(null);
+
+    if (mode === 'signup') {
+      if (!fullName.trim() || !locality.trim() || !email.trim() || !password.trim()) {
+        setErrorMsg('⚠️ Please fill out all required fields marked with (*): Name, Locality, Email & Password.');
+        setLoading(false);
+        return;
+      }
+      if (password.trim().length < 4) {
+        setErrorMsg('⚠️ Password must be at least 4 characters long.');
+        setLoading(false);
+        return;
+      }
+      // Check local registered emails list
+      const savedEmails = JSON.parse(localStorage.getItem('stay_dine_registered_emails') || '[]');
+      if (savedEmails.includes(email.trim().toLowerCase())) {
+        setErrorMsg('⚠️ This email address is already registered! Please sign in instead or use another email.');
+        setLoading(false);
+        return;
+      }
+      // If Supabase is connected, check profiles table for uniqueness
+      if (supabase) {
+        try {
+          const { data: existing } = await supabase.from('profiles').select('id, email').eq('email', email.trim().toLowerCase());
+          if (existing && existing.length > 0) {
+            setErrorMsg('⚠️ This email address is already registered! Please sign in instead or use another email.');
+            setLoading(false);
+            return;
+          }
+        } catch (err) {}
+      }
+    }
 
     try {
       if (!supabase) {
@@ -103,16 +186,20 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated }: AuthMod
 
         const mockProfile = {
           id: `user-${Date.now()}`,
-          full_name: fullName || 'Verified Student',
+          full_name: fullName.trim() || 'Verified Student',
+          email: email.trim().toLowerCase(),
           gender,
           bio: bio || 'Active on Radar',
-          locality_hub: locality,
+          locality_hub: locality.trim(),
           city_id: 'ranchi',
           lat: 23.3645,
           lng: 85.3195,
           status: 'Online',
           avatar_url: customAvatar || defaultAvatar,
         };
+        const savedEmails = JSON.parse(localStorage.getItem('stay_dine_registered_emails') || '[]');
+        savedEmails.push(email.trim().toLowerCase());
+        localStorage.setItem('stay_dine_registered_emails', JSON.stringify(savedEmails));
         localStorage.setItem('stay_dine_user_profile', JSON.stringify(mockProfile));
         if (onProfileCreated) onProfileCreated(mockProfile);
         setSuccessMsg('Profile created & active on Radar!');
@@ -137,10 +224,11 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated }: AuthMod
         const newProfile = {
           id: userId,
           full_name: fullName.trim() || 'New Student',
+          email: email.trim().toLowerCase(),
           gender,
           bio: bio.trim() || 'Active peer nearby',
           city_id: 'ranchi',
-          locality_hub: locality,
+          locality_hub: locality.trim(),
           lat: 23.3645 + (Math.random() - 0.5) * 0.01,
           lng: 85.3195 + (Math.random() - 0.5) * 0.01,
           status: 'Online',
@@ -153,6 +241,9 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated }: AuthMod
           console.warn('Profile upsert warning:', profileError.message);
         }
 
+        const savedEmails = JSON.parse(localStorage.getItem('stay_dine_registered_emails') || '[]');
+        savedEmails.push(email.trim().toLowerCase());
+        localStorage.setItem('stay_dine_registered_emails', JSON.stringify(savedEmails));
         localStorage.setItem('stay_dine_user_profile', JSON.stringify(newProfile));
         if (onProfileCreated) onProfileCreated(newProfile);
         setSuccessMsg('Profile registered inside Supabase! Welcome abroad!');
@@ -184,7 +275,12 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated }: AuthMod
       }
     } catch (err: any) {
       console.error('Auth error:', err);
-      setErrorMsg(err.message || 'Error processing request');
+      const msg = err?.message || '';
+      if (msg.toLowerCase().includes('already') || msg.toLowerCase().includes('registered') || err?.status === 422 || err?.code === 'user_already_exists') {
+        setErrorMsg('⚠️ This email address is already registered! Please sign in instead or use another unique email.');
+      } else {
+        setErrorMsg(msg || 'Error processing request');
+      }
     } finally {
       setLoading(false);
     }
@@ -373,8 +469,9 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated }: AuthMod
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-                    Your Full Name
+                  <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5 flex items-center">
+                    <span>Your Full Name</span>
+                    <span className="text-red-400 font-bold ml-1">*</span>
                   </label>
                   <div className="relative group">
                     <User className="absolute left-3.5 top-3 h-4 w-4 text-slate-500 group-focus-within:text-purple-400 transition-colors" />
@@ -384,20 +481,21 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated }: AuthMod
                       placeholder="e.g. Vikram Kumar"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 text-sm bg-black/50 border border-white/10 rounded-xl text-white font-medium placeholder:text-slate-600 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
+                      className="w-full pl-10 pr-4 py-2.5 text-[16px] sm:text-sm bg-black/50 border border-white/10 rounded-xl text-white font-medium placeholder:text-slate-600 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-                      Gender
+                    <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5 flex items-center">
+                      <span>Gender</span>
+                      <span className="text-red-400 font-bold ml-1">*</span>
                     </label>
                     <select
                       value={gender}
                       onChange={(e: any) => setGender(e.target.value)}
-                      className="w-full px-3.5 py-2.5 text-xs bg-black/50 border border-white/10 rounded-xl text-white font-semibold focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all cursor-pointer"
+                      className="w-full px-3.5 py-2.5 text-[16px] sm:text-xs bg-black/50 border border-white/10 rounded-xl text-white font-semibold focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all cursor-pointer"
                     >
                       <option value="Boys" className="bg-[#090c15]">Boys / Male</option>
                       <option value="Girls" className="bg-[#090c15]">Girls / Female</option>
@@ -406,20 +504,33 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated }: AuthMod
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-                      Locality / Hub
-                    </label>
-                    <select
-                      value={locality}
-                      onChange={(e) => setLocality(e.target.value)}
-                      className="w-full px-3.5 py-2.5 text-xs bg-black/50 border border-white/10 rounded-xl text-white font-semibold focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all cursor-pointer"
-                    >
-                      <option value="Lalpur Chowk" className="bg-[#090c15]">📍 Lalpur Chowk</option>
-                      <option value="Kanke Road" className="bg-[#090c15]">📍 Kanke Road</option>
-                      <option value="Boring Road" className="bg-[#090c15]">📍 Boring Road</option>
-                      <option value="Ashok Rajpath" className="bg-[#090c15]">📍 Ashok Rajpath</option>
-                      <option value="BIT Mesra Hub" className="bg-[#090c15]">📍 BIT Mesra Hub</option>
-                    </select>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider truncate flex items-center">
+                        <span>Locality / Hub</span>
+                        <span className="text-red-400 font-bold ml-1">*</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handleDetectLocality}
+                        disabled={detectingLocality}
+                        className="text-[10px] text-purple-400 hover:text-purple-300 font-bold flex items-center gap-1 bg-purple-500/10 px-1.5 py-0.5 rounded border border-purple-500/20 shrink-0 transition-all disabled:opacity-50"
+                        title="Auto-detect your exact area via GPS"
+                      >
+                        <MapPin className={`h-3 w-3 ${detectingLocality ? 'animate-bounce text-amber-400' : ''}`} />
+                        <span>{detectingLocality ? 'Locating...' : 'Auto GPS'}</span>
+                      </button>
+                    </div>
+                    <div className="relative group">
+                      <MapPin className="absolute left-3 top-3 h-3.5 w-3.5 text-slate-500 group-focus-within:text-purple-400 transition-colors" />
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Rajiv Nagar Lane 4"
+                        value={locality}
+                        onChange={(e) => setLocality(e.target.value)}
+                        className="w-full pl-8 pr-3 py-2.5 text-[16px] sm:text-xs bg-black/50 border border-white/10 rounded-xl text-white font-semibold placeholder:text-slate-600 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -433,15 +544,16 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated }: AuthMod
                     placeholder="e.g. BPSC Target 2026. Looking for room partner near library!"
                     value={bio}
                     onChange={(e) => setBio(e.target.value)}
-                    className="w-full px-4 py-2.5 text-xs bg-black/50 border border-white/10 rounded-xl text-white font-medium placeholder:text-slate-600 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
+                    className="w-full px-4 py-2.5 text-[16px] sm:text-xs bg-black/50 border border-white/10 rounded-xl text-white font-medium placeholder:text-slate-600 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
                   />
                 </div>
               </>
             )}
 
             <div>
-              <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-                Email Address (`or Student ID`)
+              <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5 flex items-center">
+                <span>Email Address (`or Student ID`)</span>
+                <span className="text-red-400 font-bold ml-1">*</span>
               </label>
               <div className="relative group">
                 <Mail className="absolute left-3.5 top-3 h-4 w-4 text-slate-500 group-focus-within:text-purple-400 transition-colors" />
@@ -451,14 +563,15 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated }: AuthMod
                   placeholder="you@gmail.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 text-sm bg-black/50 border border-white/10 rounded-xl text-white font-semibold placeholder:text-slate-600 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
+                  className="w-full pl-10 pr-4 py-2.5 text-[16px] sm:text-sm bg-black/50 border border-white/10 rounded-xl text-white font-semibold placeholder:text-slate-600 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-                Password
+              <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5 flex items-center">
+                <span>Password</span>
+                <span className="text-red-400 font-bold ml-1">*</span>
               </label>
               <div className="relative group">
                 <Lock className="absolute left-3.5 top-3 h-4 w-4 text-slate-500 group-focus-within:text-purple-400 transition-colors" />
@@ -468,7 +581,7 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated }: AuthMod
                   placeholder="Min 6 characters"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 text-sm bg-black/50 border border-white/10 rounded-xl text-white font-semibold placeholder:text-slate-600 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
+                  className="w-full pl-10 pr-4 py-2.5 text-[16px] sm:text-sm bg-black/50 border border-white/10 rounded-xl text-white font-semibold placeholder:text-slate-600 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
                 />
               </div>
             </div>

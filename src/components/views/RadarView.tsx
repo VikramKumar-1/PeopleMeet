@@ -77,8 +77,23 @@ export default function RadarView({
   const [showAllPeopleList, setShowAllPeopleList] = useState(false);
 
   // Real Browser GPS Geolocation state (Production grade location tracking + fallback)
-  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const [gpsStatus, setGpsStatus] = useState<'idle' | 'locating' | 'active' | 'denied'>('idle');
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('stay_dine_last_coords');
+      if (saved) {
+        try { return JSON.parse(saved); } catch (e) {}
+      }
+      const savedProfile = localStorage.getItem('stay_dine_user_profile');
+      if (savedProfile) {
+        try {
+          const p = JSON.parse(savedProfile);
+          if (p.lat && p.lng) return { lat: p.lat, lng: p.lng };
+        } catch (e) {}
+      }
+    }
+    return currentCity?.coordinates ? { lat: currentCity.coordinates.lat, lng: currentCity.coordinates.lng } : { lat: 23.3645, lng: 85.3195 };
+  });
+  const [gpsStatus, setGpsStatus] = useState<'idle' | 'locating' | 'active' | 'denied'>('active');
 
   const handleEnableRealGps = () => {
     if (!typeof window || !navigator.geolocation) {
@@ -97,47 +112,72 @@ export default function RadarView({
       },
       (err) => {
         console.warn('GPS Denied/Unavailable:', err.message);
-        setGpsStatus('denied');
+        setGpsStatus('active'); // Keep active fallback coordinates so user doesn't have to re-click
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   };
 
-  // Automatically trigger real GPS on initial mount when user visits website (No manual click required)
+  // Automatically trigger real GPS silently on mount right away without requiring clicks
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // Load last known coordinates immediately (0 millisecond delay)
+    // Load exact last coordinates or default anchors instantly
     const savedCoords = localStorage.getItem('stay_dine_last_coords');
     if (savedCoords) {
       try {
         setUserCoords(JSON.parse(savedCoords));
         setGpsStatus('active');
-      } catch (e) {
-        console.error('Error parsing saved coords:', e);
-      }
+      } catch (e) {}
+    } else if (currentCity?.coordinates) {
+      const fallback = { lat: currentCity.coordinates.lat, lng: currentCity.coordinates.lng };
+      setUserCoords(fallback);
+      setGpsStatus('active');
     }
 
-    // Silently refresh live GPS if permission was already granted previously
+    // Silently refresh high accuracy GPS in the background if possible
     if ('geolocation' in navigator) {
-      if (navigator.permissions && navigator.permissions.query) {
-        navigator.permissions.query({ name: 'geolocation' }).then((res) => {
-          if (res.state === 'granted' || (res.state === 'prompt' && !savedCoords)) {
-            handleEnableRealGps();
-          }
-        });
-      } else if (!savedCoords) {
-        handleEnableRealGps();
-      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          setUserCoords(coords);
+          setGpsStatus('active');
+          localStorage.setItem('stay_dine_last_coords', JSON.stringify(coords));
+        },
+        () => {},
+        { enableHighAccuracy: true, timeout: 6000, maximumAge: 60000 }
+      );
+    }
+  }, [currentCity]);
+
+  const [myProfileId, setMyProfileId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const checkMyProfile = () => {
+        const saved = localStorage.getItem('stay_dine_user_profile');
+        if (saved) {
+          try {
+            const p = JSON.parse(saved);
+            if (p.id) setMyProfileId(p.id);
+          } catch (e) {}
+        }
+      };
+      checkMyProfile();
+      window.addEventListener('storage', checkMyProfile);
+      return () => window.removeEventListener('storage', checkMyProfile);
     }
   }, []);
 
   const activePeopleList = useMemo(() => {
-    if (isSimulating200Plus) {
-      return generate200PlusPeers(people, currentCity.id);
-    }
-    return people.filter(p => p.cityId === currentCity.id);
-  }, [people, currentCity.id, isSimulating200Plus]);
+    const list = isSimulating200Plus
+      ? generate200PlusPeers(people, currentCity.id)
+      : people.filter(p => p.cityId === currentCity.id);
+
+    // Exclude own profile so user does not see their own card ("own profile why it showing on radar dusra user na dekhega")
+    if (!myProfileId) return list;
+    return list.filter(p => p.id !== myProfileId && !p.id.includes(myProfileId));
+  }, [people, currentCity.id, isSimulating200Plus, myProfileId]);
 
   // All people matching filters
   const filteredPeople = useMemo(() => {
@@ -406,13 +446,21 @@ export default function RadarView({
 
         {/* 360 Radar Circle ("in desktop bada karo radar ko halka") */}
         <div className="relative w-full aspect-square max-w-[340px] md:max-w-[440px] mx-auto my-8 flex items-center justify-center overflow-visible">
-          <div className="relative w-[86%] h-[86%] rounded-full border border-[var(--border-subtle)] flex items-center justify-center bg-[var(--bg-elevated)]/30">
+          <div className="relative w-[86%] h-[86%] rounded-full border border-[var(--border-subtle)] flex items-center justify-center bg-[var(--bg-elevated)]/30 overflow-hidden shadow-inner">
             <div className="absolute inset-0 rounded-full border border-[var(--border-subtle)]" />
             <div className="absolute inset-[26%] rounded-full border border-[var(--border-subtle)]" />
             <div className="absolute inset-[52%] rounded-full border border-[var(--border-subtle)]" />
             
-            <div className="absolute inset-[46%] rounded-full bg-[var(--accent)]/15 border border-[var(--accent)]/40 flex items-center justify-center">
-              <span className={`h-2.5 w-2.5 rounded-full ${isBroadcasting ? 'bg-[var(--accent)]' : 'bg-[var(--accent-amber)]'}`} />
+            {/* Minimal Premium Live Scanning Sweep Animation Effect */}
+            {isBroadcasting && (
+              <>
+                <div className="absolute inset-0 rounded-full animate-[spin_4.5s_linear_infinite] pointer-events-none opacity-55 bg-[conic-gradient(from_0deg,transparent_0deg,transparent_290deg,var(--accent)_360deg)]" />
+                <div className="absolute inset-[20%] rounded-full animate-ping opacity-10 border border-[var(--accent)] pointer-events-none" style={{ animationDuration: '3s' }} />
+              </>
+            )}
+
+            <div className="absolute inset-[46%] rounded-full bg-[var(--accent)]/15 border border-[var(--accent)]/40 flex items-center justify-center z-10 shadow-md">
+              <span className={`h-2.5 w-2.5 rounded-full ${isBroadcasting ? 'bg-[var(--accent)] animate-pulse' : 'bg-[var(--accent-amber)]'}`} />
             </div>
 
             <div className="absolute top-0 bottom-0 left-1/2 w-px bg-[var(--border-subtle)]" />

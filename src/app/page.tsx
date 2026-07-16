@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Navbar from '@/components/Navbar';
 import BottomNav, { TabType } from '@/components/BottomNav';
 import CitySelectorModal from '@/components/CitySelectorModal';
@@ -32,6 +32,32 @@ export default function Home() {
 
   const [friendRequestsSent, setFriendRequestsSent] = useState<string[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [myProfileId, setMyProfileId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const checkSavedData = () => {
+        const savedReqs = localStorage.getItem('stay_dine_friend_requests');
+        if (savedReqs) {
+          try { setFriendRequestsSent(JSON.parse(savedReqs)); } catch (e) {}
+        }
+        const savedMsgs = localStorage.getItem('stay_dine_messages');
+        if (savedMsgs) {
+          try { setMessages(JSON.parse(savedMsgs)); } catch (e) {}
+        }
+        const savedProfile = localStorage.getItem('stay_dine_user_profile');
+        if (savedProfile) {
+          try {
+            const p = JSON.parse(savedProfile);
+            if (p.id) setMyProfileId(p.id);
+          } catch (e) {}
+        }
+      };
+      checkSavedData();
+      window.addEventListener('storage', checkSavedData);
+      return () => window.removeEventListener('storage', checkSavedData);
+    }
+  }, []);
 
   // Register Service Worker & check initial theme & Run Auto Location Detection
   useEffect(() => {
@@ -142,8 +168,14 @@ export default function Home() {
 
   const handleSendFriendRequest = (personId: string) => {
     if (!friendRequestsSent.includes(personId)) {
-      setFriendRequestsSent([...friendRequestsSent, personId]);
-      showToast('Friend request sent!');
+      const updated = [...friendRequestsSent, personId];
+      setFriendRequestsSent(updated);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('stay_dine_friend_requests', JSON.stringify(updated));
+      }
+      showToast('Wave / Friend request sent! 👋');
+    } else {
+      showToast('Already sent wave to this peer! ✨');
     }
   };
 
@@ -189,18 +221,31 @@ export default function Home() {
 
   const handleSendMessage = (text: string) => {
     const newMsg: ChatMessage = { id: `m-${Date.now()}`, senderId: 'me', receiverId: activeChatPerson?.id ?? 'general', text, timestamp: 'Now', isRead: true };
-    setMessages((prev) => [...prev, newMsg]);
+    setMessages((prev) => {
+      const updated = [...prev, newMsg];
+      if (typeof window !== 'undefined') localStorage.setItem('stay_dine_messages', JSON.stringify(updated));
+      return updated;
+    });
     if (activeChatPerson) {
       setTimeout(() => {
-        setMessages((prev) => [...prev, {
-          id: `r-${Date.now()}`, senderId: activeChatPerson.id, receiverId: 'me',
-          text: `Got it! Let's meet near ${currentCity ? currentCity.defaultHub : 'Lalpur'} tonight.`, timestamp: 'Just now', isRead: false,
-        }]);
+        setMessages((prev) => {
+          const reply: ChatMessage = {
+            id: `r-${Date.now()}`, senderId: activeChatPerson.id, receiverId: 'me',
+            text: `Got it! Let's meet near ${currentCity ? currentCity.defaultHub : 'Lalpur'} tonight.`, timestamp: 'Just now', isRead: false,
+          };
+          const updated = [...prev, reply];
+          if (typeof window !== 'undefined') localStorage.setItem('stay_dine_messages', JSON.stringify(updated));
+          return updated;
+        });
       }, 1200);
     }
   };
 
-  const currentCityPeople = currentCity ? livePeopleList.filter((p) => p.cityId === currentCity.id) : livePeopleList;
+  const currentCityPeople = useMemo(() => {
+    const list = currentCity ? livePeopleList.filter((p) => p.cityId === currentCity.id) : livePeopleList;
+    if (!myProfileId) return list;
+    return list.filter((p) => p.id !== myProfileId && !p.id.includes(myProfileId));
+  }, [currentCity, livePeopleList, myProfileId]);
 
   return (
     <div className="min-h-screen flex flex-col">
