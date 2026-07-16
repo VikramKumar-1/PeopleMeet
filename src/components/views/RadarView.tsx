@@ -43,12 +43,13 @@ function generate200PlusPeers(basePeers: RadarPerson[], cityId: string): RadarPe
       id: `sim-user-${i}`,
       name: `${fn} ${ln}`,
       avatar: avatars[i % avatars.length],
+      coordinates: { lat: 23.364 + (Math.random() - 0.5) * 0.02, lng: 85.319 + (Math.random() - 0.5) * 0.02 },
       distanceMeter: dist,
       status: i % 4 === 0 ? 'Online' : 'Walking on Road',
       bio,
       hub,
       gender,
-      cityId,
+      cityId: cityId as any,
     });
   }
   return simulated.sort((a, b) => a.distanceMeter - b.distanceMeter);

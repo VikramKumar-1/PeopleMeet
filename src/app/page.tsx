@@ -341,7 +341,7 @@ export default function Home() {
                 </button>
               </div>
               <div className="p-4">
-                <AccountView currentCity={currentCity} onOpenListModal={() => setIsListModalOpen(true)}
+                <AccountView currentCity={currentCity || CITIES[0]} onOpenListModal={() => setIsListModalOpen(true)}
                   friendRequestsSent={friendRequestsSent} peopleList={currentCityPeople}
                   onOpenChatWithPerson={handleOpenChatWithPerson} />
               </div>

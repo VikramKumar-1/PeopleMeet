@@ -18,7 +18,7 @@ export interface RadarPerson {
   gender: 'Boys' | 'Girls' | 'Others';
   avatar: string;
   bio: string;
-  coordinates: { lat: number; lng: number }; // Exact GPS location inside city
+  coordinates?: { lat: number; lng: number }; // Exact GPS location inside city
   distanceMeter: number; // Dynamically calculated from user's active coordinate
   status: 'Online' | 'Study Mode' | 'Looking for PG' | 'Walking on Road';
   hub: string;
