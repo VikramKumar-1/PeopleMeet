@@ -80,7 +80,7 @@ export default function Home() {
 
               // 1. Try matching by exact IP coordinates (< 40km from any registered city center)
               if (!isNaN(ipLat) && !isNaN(ipLng)) {
-                let closestCity: CityHub | null = null;
+                let closestCity: any = null;
                 let minDist = Infinity;
                 CITIES.forEach(c => {
                   const dKm = Math.hypot(c.coordinates.lat - ipLat, c.coordinates.lng - ipLng) * 111; // ~111km per lat/lng degree
@@ -92,7 +92,7 @@ export default function Home() {
                 if (closestCity) {
                   setCurrentCity(closestCity);
                   setLocationDetectStatus('success');
-                  localStorage.setItem('stay_dine_user_city', closestCity.id);
+                  localStorage.setItem('stay_dine_user_city', (closestCity as any).id);
                   return;
                 }
               }
