@@ -361,26 +361,16 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
           )}
 
           {isMandatory && (
-            <div className="mb-4 p-3 rounded-xl bg-purple-500/15 border border-purple-500/30 text-purple-300 text-xs font-semibold flex items-center gap-2 text-center shadow-inner">
-              <ShieldCheck className="h-4 w-4 text-purple-400 shrink-0 mx-auto" />
-              <span>Mandatory Verification: Sign in or create your profile first to access the live proximity radar & network.</span>
+            <div className="mb-4 p-3 rounded-xl bg-purple-500/15 border border-purple-500/30 text-purple-300 text-sm font-semibold flex items-center justify-center gap-2 text-center shadow-inner">
+              <ShieldCheck className="h-5 w-5 shrink-0" />
+              <span>Sign in to access radar</span>
             </div>
           )}
 
-          <div className="text-center mt-1 relative z-10">
-            <div className="h-14 w-14 rounded-2xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-600 p-[1.5px] shadow-lg shadow-purple-500/30 mx-auto mb-3 flex items-center justify-center">
-              <div className="h-full w-full rounded-[14px] bg-[#090c15] flex items-center justify-center">
-                <Sparkles className="h-6 w-6 text-purple-400 animate-pulse" />
-              </div>
-            </div>
+          <div className="text-center mt-2 relative z-10">
             <h3 className="text-2xl font-black text-white tracking-tight">
-              {mode === 'signup' ? 'Join PeopleMeet 🚀' : 'Welcome Back ✨'}
+              {mode === 'signup' ? 'Join PeopleMeet' : 'Welcome Back'}
             </h3>
-            <p className="text-xs text-slate-400 font-medium mt-1">
-              {mode === 'signup'
-                ? 'Discover peers, verified PGs, and study partners around you'
-                : 'Sign in to access your live campus proximity radar'}
-            </p>
           </div>
 
           {/* Premium Tab Switcher */}
@@ -432,12 +422,11 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
           <form onSubmit={handleSubmit} className="space-y-4 relative z-10">
             {mode === 'signup' && (
               <>
-                {/* Live Selfie & Gallery Photo Upload Studio */}
+                {/* Profile Photo */}
                 <div className="p-3.5 rounded-2xl bg-black/40 border border-white/10 space-y-3 shadow-inner">
                   <div className="flex items-center justify-between">
-                    <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <label className="text-sm font-semibold text-slate-300 flex items-center gap-1.5">
                       <span>Profile Photo</span>
-                      <span className="text-[10px] text-purple-400 font-normal">(`Selfie or Upload`)</span>
                     </label>
                     {customAvatar && (
                       <button
@@ -525,9 +514,9 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5 flex items-center">
-                    <span>Your Full Name</span>
-                    <span className="text-red-400 font-bold ml-1">*</span>
+                  <label className="block text-sm font-semibold text-slate-300 mb-1.5 flex items-center">
+                    <span>Full Name</span>
+                    <span className="text-red-400 ml-1">*</span>
                   </label>
                   <div className="relative group">
                     <User className="absolute left-3.5 top-3 h-4 w-4 text-slate-500 group-focus-within:text-purple-400 transition-colors" />
@@ -544,9 +533,9 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5 flex items-center">
+                    <label className="block text-sm font-semibold text-slate-300 mb-1.5 flex items-center">
                       <span>Gender</span>
-                      <span className="text-red-400 font-bold ml-1">*</span>
+                      <span className="text-red-400 ml-1">*</span>
                     </label>
                     <select
                       value={gender}
@@ -561,9 +550,9 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
 
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider truncate flex items-center">
-                        <span>Locality / Hub</span>
-                        <span className="text-red-400 font-bold ml-1">*</span>
+                      <label className="block text-sm font-semibold text-slate-300 truncate flex items-center">
+                        <span>Locality</span>
+                        <span className="text-red-400 ml-1">*</span>
                       </label>
                       <button
                         type="button"
@@ -591,8 +580,8 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-                    Exam & About Bio (`What do you need?`)
+                  <label className="block text-sm font-semibold text-slate-300 mb-1.5">
+                    Short Bio (Exams, Needs, etc.)
                   </label>
                   <input
                     type="text"
@@ -607,9 +596,9 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
             )}
 
             <div>
-              <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5 flex items-center">
+              <label className="block text-sm font-semibold text-slate-300 mb-1.5 flex items-center">
                 <span>Email Address</span>
-                <span className="text-red-400 font-bold ml-1">*</span>
+                <span className="text-red-400 ml-1">*</span>
               </label>
               <div className="relative group">
                 <Mail className="absolute left-3.5 top-3 h-4 w-4 text-slate-500 group-focus-within:text-purple-400 transition-colors" />
@@ -625,9 +614,9 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
             </div>
 
             <div>
-              <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5 flex items-center">
+              <label className="block text-sm font-semibold text-slate-300 mb-1.5 flex items-center">
                 <span>Password</span>
-                <span className="text-red-400 font-bold ml-1">*</span>
+                <span className="text-red-400 ml-1">*</span>
               </label>
               <div className="relative group">
                 <Lock className="absolute left-3.5 top-3 h-4 w-4 text-slate-500 group-focus-within:text-purple-400 transition-colors" />

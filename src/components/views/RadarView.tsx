@@ -679,7 +679,7 @@ export default function RadarView({
             )}
           </div>
 
-          {/* Bottom Trigger: Explore List ("agar 10+ hai toh click krne pe sab dikhega") */}
+          {/* Bottom Trigger: Explore List */}
           {filteredPeople.length > 0 && (
             <button
               onClick={() => {
@@ -689,13 +689,25 @@ export default function RadarView({
                   if (el) el.scrollIntoView({ behavior: 'smooth' });
                 }, 50);
               }}
-              className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full bg-gradient-to-r from-[var(--accent)] to-blue-600 text-white text-xs font-black shadow-xl flex items-center gap-2 hover:brightness-110 transition-all z-10 whitespace-nowrap border border-white/20"
+              className="absolute -bottom-5 left-1/2 -translate-x-1/2 px-5 py-2 rounded-full text-[11px] font-black shadow-xl flex items-center gap-2 transition-all z-10 whitespace-nowrap border border-[var(--glass-border)] backdrop-blur-md hover:scale-105"
+              style={{ background: 'var(--glass-bg)' }}
             >
-              <Users className="h-4 w-4 animate-bounce" />
-              <span>⚡ {filteredPeople.length} People Active in Radius</span>
-              <span className="text-[10px] opacity-90 underline ml-1 flex items-center gap-0.5">
-                {showAllPeopleList ? <>Hide Grid <ChevronUp className="h-3 w-3" /></> : <>Explore All ({filteredPeople.length >= 10 ? '10+' : filteredPeople.length}) <ChevronDown className="h-3 w-3" /></>}
-              </span>
+              {showAllPeopleList ? (
+                <>
+                  <Users className="h-4 w-4 text-[var(--text-secondary)]" />
+                  <span className="uppercase tracking-wider text-[var(--text-secondary)]">Viewing All People</span>
+                  <ChevronUp className="h-3.5 w-3.5 text-[var(--text-secondary)] opacity-80" />
+                </>
+              ) : (
+                <>
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--accent-green)] opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[var(--accent-green)]"></span>
+                  </span>
+                  <span className="uppercase tracking-wider text-[var(--text-primary)]">{filteredPeople.length} People Nearby</span>
+                  <ChevronDown className="h-3.5 w-3.5 text-[var(--text-primary)] opacity-80" />
+                </>
+              )}
             </button>
           )}
         </div>
@@ -778,72 +790,45 @@ export default function RadarView({
       <div id="suggested-section-anchor" />
 
       {/* 3. Conditional Layout Hierarchy ("radar upper rahega uske niche suggested agar 10+ hai toh click krne pe sab dikhega niche suggested niche chala jayega") */}
-      {!showAllPeopleList ? (
-        <>
-          {/* Default View: Suggested right below Radar */}
-          {renderSuggestedSection()}
-
-          {/* Expand Trigger Card */}
-          {filteredPeople.length > 0 && (
-            <div
-              onClick={() => {
-                setShowAllPeopleList(true);
+      {/* 3. Conditional Layout Hierarchy */}
+      
+      {/* Section Header with See More / See Less Toggle */}
+      {filteredPeople.length > 0 && (
+        <div className="flex items-center justify-between px-2 mb-3 mt-2">
+          <h3 className="text-[15px] font-black text-[var(--text-primary)]">
+            {showAllPeopleList ? 'All People Nearby' : 'Top Suggested'}
+          </h3>
+          <button
+            onClick={() => {
+              setShowAllPeopleList(!showAllPeopleList);
+              if (!showAllPeopleList) {
                 setTimeout(() => {
                   const el = document.getElementById('people-nearby-list');
                   if (el) el.scrollIntoView({ behavior: 'smooth' });
                 }, 50);
-              }}
-              className="card p-4 bg-gradient-to-r from-[var(--bg-elevated)] to-[var(--bg-card)] border border-[var(--border-hover)] cursor-pointer hover:border-[var(--accent)] transition-all flex items-center justify-between group shadow-md"
-            >
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-[var(--accent)]/15 text-[var(--accent)] flex items-center justify-center font-black group-hover:scale-110 transition-transform">
-                  <Users className="h-5 w-5" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-bold text-[var(--text-primary)] group-hover:text-[var(--accent)] transition-colors">
-                    View All {filteredPeople.length} Active City Peers & Residents Nearby {filteredPeople.length >= 10 ? '(10+ Active)' : ''}
-                  </h4>
-                  <p className="text-xs text-[var(--text-tertiary)] mt-0.5">
-                    Click to open full searchable grid · Filter by Boring Road, Lalpur & More
-                  </p>
-                </div>
-              </div>
-              <ChevronDown className="h-5 w-5 text-[var(--accent)] group-hover:translate-y-0.5 transition-transform shrink-0" />
-            </div>
-          )}
+              }
+            }}
+            className="text-xs font-extrabold text-[var(--accent)] flex items-center gap-1 bg-[var(--accent)]/10 px-3 py-1.5 rounded-full hover:bg-[var(--accent)]/20 transition-colors"
+          >
+            {showAllPeopleList ? 'See Less' : 'See More'}
+            {showAllPeopleList ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+          </button>
+        </div>
+      )}
+
+      {!showAllPeopleList ? (
+        <>
+          {/* Default View: Suggested right below Radar */}
+          {renderSuggestedSection()}
         </>
       ) : (
         <>
           {/* Expanded View: Full Interactive Searchable Grid opens first right below Radar */}
           <div id="people-nearby-list" className="space-y-3 pt-2">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[var(--bg-card)] p-4 rounded-2xl border border-[var(--border-hover)] shadow-lg">
-              <div>
-                <h3 className="text-base font-bold text-[var(--text-primary)] flex items-center gap-2">
-                  <span>All People in Radius ({filteredPeople.length})</span>
-                  {selectedHubFilter !== 'All Hubs' && (
-                    <span className="badge badge-purple text-xs">Filter: {selectedHubFilter} ✕</span>
-                  )}
-                </h3>
-              </div>
 
-              <div className="flex w-full sm:w-auto items-center justify-end gap-2">
-                <button
-                  onClick={() => setShowAllPeopleList(false)}
-                  className="px-3 py-1.5 rounded-xl bg-[var(--bg-elevated)] text-[var(--text-secondary)] border border-[var(--border-subtle)] text-xs font-bold hover:opacity-80 transition-colors shrink-0 flex items-center gap-1"
-                >
-                  <ChevronUp className="h-4 w-4" /> Hide
-                </button>
-              </div>
-            </div>
 
-            {selectedHubFilter !== 'All Hubs' && (
-              <div className="flex items-center gap-2 text-xs text-[var(--accent)] font-semibold pb-1">
-                <span>Showing only people at {selectedHubFilter}.</span>
-                <button onClick={() => setSelectedHubFilter('All Hubs')} className="underline">Show All ({activePeopleList.length})</button>
-              </div>
-            )}
 
-            <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1 no-scrollbar">
+            <div className="space-y-2">
               {filteredPeople.slice(0, 50).map((p) => {
                 const lastSeen = p.lastSeenAt ? new Date(p.lastSeenAt) : null;
                 const minsAgo = lastSeen ? Math.floor((Date.now() - lastSeen.getTime()) / 60000) : 999;
@@ -885,22 +870,11 @@ export default function RadarView({
               )}
             </div>
 
-            {/* Close / Collapse Button at bottom of Grid */}
-            <div className="pt-2">
-              <button
-                onClick={() => {
-                  setShowAllPeopleList(false);
-                  window.scrollTo({ top: 120, behavior: 'smooth' });
-                }}
-                className="w-full py-2.5 rounded-xl bg-[var(--bg-elevated)] text-[var(--text-primary)] border border-[var(--border-hover)] text-xs font-bold hover:bg-[var(--accent)] hover:text-white transition-all flex items-center justify-center gap-1.5 shadow-md"
-              >
-                <ChevronUp className="h-4 w-4" /> Collapse Full Grid & Return to Suggested View
-              </button>
-            </div>
           </div>
 
           {/* And exactly as requested ("niche suggested niche chala jayega"), Suggested moves underneath when Grid is open! */}
-          <div className="pt-6 border-t border-[var(--border-subtle)]">
+          <div className="pt-6 border-t border-[var(--border-subtle)] mt-4">
+            <h3 className="text-sm font-bold text-[var(--text-secondary)] px-2 mb-3">Top Suggested</h3>
             {renderSuggestedSection()}
           </div>
         </>

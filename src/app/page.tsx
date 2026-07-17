@@ -59,6 +59,11 @@ export default function Home() {
     return null;
   });
 
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const checkSavedData = () => {
@@ -468,6 +473,10 @@ export default function Home() {
       return true;
     });
   }, [currentCity, livePeopleList, myProfileId, userCoords]);
+
+  if (!isMounted) {
+    return <div className="min-h-screen flex flex-col bg-[var(--bg-primary)]"></div>;
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
