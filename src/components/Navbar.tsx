@@ -73,31 +73,36 @@ export default function Navbar({
         </div>
       </div>
 
-      {/* Blinkit / Instamart Style Location & Accuracy Bar Below Navbar */}
-      <div
-        onClick={onOpenCitySelector}
-        className="w-full px-4 py-2 border-t border-[var(--border-subtle)] bg-[var(--bg-elevated)]/90 flex items-center justify-between text-xs cursor-pointer hover:bg-[var(--bg-surface)] transition-all shadow-inner"
-      >
-        <div className="flex items-center gap-2 min-w-0 max-w-[75%] sm:max-w-md">
-          <MapPin className="h-3.5 w-3.5 shrink-0 text-emerald-500 animate-bounce" />
-          <div className="flex items-center gap-1.5 truncate">
-            <span className="font-extrabold tracking-tight text-[var(--text-primary)]">
-              {currentCity ? currentCity.name.split(' (')[0] : 'Locating...'}
-            </span>
-            <span className="text-[var(--text-tertiary)]">·</span>
-            <span className="font-semibold text-[var(--accent)] truncate">
-              {currentCity?.defaultHub || 'Lalpur Chowk Hub'}
-            </span>
-            <span className="text-[10px] text-[var(--text-tertiary)] shrink-0">▼</span>
+      {/* Blinkit / Instamart Style Location Capsule Below Navbar */}
+      <div className="w-full px-3 pb-2 bg-transparent flex justify-center pointer-events-none">
+        <div
+          onClick={onOpenCitySelector}
+          className="w-full max-w-lg px-3 py-1.5 border border-[var(--border-subtle)] rounded-full bg-[var(--bg-primary)]/75 backdrop-blur-md flex items-center justify-between text-[11px] cursor-pointer transition-all shadow-sm pointer-events-auto"
+        >
+          <div className="flex items-center gap-1.5 min-w-0 max-w-[75%] sm:max-w-md">
+            <MapPin className="h-3 w-3 shrink-0 text-emerald-500" />
+            <div className="flex items-center gap-1 truncate">
+              <span className="font-extrabold tracking-tight text-[var(--text-primary)]">
+                {currentCity ? currentCity.name.split(' (')[0] : 'Locating...'}
+              </span>
+              <span className="text-[var(--text-tertiary)]">·</span>
+              <span className="font-semibold text-[var(--accent)] truncate">
+                {currentCity?.defaultHub || 'Lalpur Chowk Hub'}
+              </span>
+              <span className="text-[9px] text-[var(--text-tertiary)] shrink-0 ml-0.5">▼</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1 shrink-0 pl-2">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            <span className="text-[10px] font-bold text-emerald-500/90 hidden sm:inline">Active (±10m)</span>
+            <span className="text-[10px] font-bold text-emerald-500/90 sm:hidden">Live</span>
           </div>
         </div>
-
-        <div className="flex items-center gap-1.5 shrink-0 pl-2">
-          <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-[11px] font-bold text-emerald-500 hidden sm:inline">Active Proximity (±10m)</span>
-          <span className="text-[11px] font-bold text-emerald-500 sm:hidden">Live Accuracy</span>
-        </div>
       </div>
+
+      {/* Scroll Fade Mask (Blinkit Style) */}
+      <div className="absolute top-full left-0 right-0 h-8 bg-gradient-to-b from-[var(--bg-primary)] to-transparent pointer-events-none opacity-90" />
     </header>
   );
 }

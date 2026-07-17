@@ -68,7 +68,7 @@ export const RADAR_PEOPLE: RadarPerson[] = [
     bio: 'UPSC Aspirant reading in Central Library right now. Happy to connect over evening tea.',
     coordinates: { lat: 25.6095, lng: 85.1390 }, // ~190m away
     distanceMeter: 195,
-    status: 'Study Mode',
+    status: 'Offline',
     hub: 'Boring Road',
     cityId: 'patna',
     isOnline: false,
@@ -126,7 +126,7 @@ export const RADAR_PEOPLE: RadarPerson[] = [
     bio: 'GATE Aspirant studying in library near Plaza Chowk. Let\'s share formula notes!',
     coordinates: { lat: 23.3660, lng: 85.3220 }, // ~280m away
     distanceMeter: 290,
-    status: 'Study Mode',
+    status: 'Offline',
     hub: 'Lalpur Chowk',
     cityId: 'ranchi',
     isOnline: false,

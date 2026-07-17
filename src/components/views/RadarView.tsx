@@ -559,6 +559,10 @@ export default function RadarView({
               {individualPins.map((p) => {
                 const isSelected = selectedPerson?.id === p.id;
                 const isNearBottom = p.y > 15;
+                const lastSeen = p.lastSeenAt ? new Date(p.lastSeenAt) : null;
+                const minsAgo = lastSeen ? Math.floor((Date.now() - lastSeen.getTime()) / 60000) : 999;
+                const isLive = p.isOnline || minsAgo < 5;
+                const activeLabel = isLive ? 'Live now' : minsAgo < 120 ? `${minsAgo}m ago` : minsAgo < 1440 ? `${Math.floor(minsAgo / 60)}h ago` : 'today';
 
                 return (
                   <motion.div key={p.id}
