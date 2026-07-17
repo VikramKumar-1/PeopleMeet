@@ -313,7 +313,7 @@ export default function Home() {
       );
     }
 
-    // 30-second heartbeat: update location in Supabase + mark online
+    // 3-minute heartbeat: update location in Supabase + mark online
     const heartbeat = setInterval(() => {
       if (!myProfileId) return;
       try {
@@ -323,7 +323,7 @@ export default function Home() {
           if (c.lat && c.lng) updateUserLocation(myProfileId, c.lat, c.lng, 'gps');
         }
       } catch (e) {}
-    }, 30000);
+    }, 180000);
 
     // Initial sync on mount
     if (myProfileId) {

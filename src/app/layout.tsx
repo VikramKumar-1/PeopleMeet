@@ -19,8 +19,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PeopleMeet / Zingly — Live Student & Campus Radar",
-  description: "Live proximity radar to find students, verified PGs, flats & tiffin centers across Patna, Ranchi & Delhi.",
+  title: "PeopleMeet — Live People & Proximity Radar",
+  description: "Live proximity radar to find people, verified PGs, flats & tiffins across your city.",
   applicationName: "PeopleMeet",
   appleWebApp: {
     capable: true,

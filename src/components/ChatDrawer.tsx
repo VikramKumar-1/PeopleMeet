@@ -61,7 +61,7 @@ export default function ChatDrawer({
                   <p className="text-xs text-[#8696a0]">
                     {activeChatPerson
                       ? `End-to-End Encrypted · ${activeChatPerson.name}`
-                      : 'WhatsApp-Style Instant Student Messaging'}
+                      : 'WhatsApp-Style Instant Messaging'}
                   </p>
                 </div>
               </div>
@@ -179,7 +179,7 @@ export default function ChatDrawer({
               /* People List inbox when no specific chat is open */
               <div className="flex-1 overflow-y-auto p-4 space-y-2">
                 <p className="text-xs font-semibold uppercase text-slate-400 px-1 pb-1 flex items-center justify-between">
-                  <span>Nearby Students on Radar</span>
+                  <span>Nearby People on Radar</span>
                   <span className="text-[11px] font-normal text-cyan-400">Live 0m–1km</span>
                 </p>
 

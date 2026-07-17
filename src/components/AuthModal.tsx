@@ -205,7 +205,7 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
 
         const mockProfile = {
           id: `user-${Date.now()}`,
-          full_name: fullName.trim() || 'Verified Student',
+          full_name: fullName.trim() || 'Verified Person',
           email: email.trim().toLowerCase(),
           gender,
           bio: bio || 'Active on Radar',
@@ -263,7 +263,7 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
 
         const newProfile = {
           id: userId,
-          full_name: fullName.trim() || 'New Student',
+          full_name: fullName.trim() || 'New Person',
           email: email.trim().toLowerCase(),
           gender,
           bio: bio.trim() || 'Active peer nearby',
@@ -363,7 +363,7 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
           {isMandatory && (
             <div className="mb-4 p-3 rounded-xl bg-purple-500/15 border border-purple-500/30 text-purple-300 text-xs font-semibold flex items-center gap-2 text-center shadow-inner">
               <ShieldCheck className="h-4 w-4 text-purple-400 shrink-0 mx-auto" />
-              <span>Mandatory Verification: Sign in or create your profile first to access the live student radar & network.</span>
+              <span>Mandatory Verification: Sign in or create your profile first to access the live proximity radar & network.</span>
             </div>
           )}
 
@@ -608,7 +608,7 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
 
             <div>
               <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5 flex items-center">
-                <span>Email Address (`or Student ID`)</span>
+                <span>Email Address</span>
                 <span className="text-red-400 font-bold ml-1">*</span>
               </label>
               <div className="relative group">

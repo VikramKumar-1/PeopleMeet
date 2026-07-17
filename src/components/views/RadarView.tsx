@@ -285,8 +285,17 @@ export default function RadarView({
   }, [activePeopleList]);
 
   const { individualPins, overflowAvatars } = useMemo(() => {
-    const sortedByDistance = [...filteredPeople].sort((a, b) => a.distanceMeter - b.distanceMeter);
-    const topIndividuals = sortedByDistance.slice(0, 8);
+    const sortedByPriority = [...filteredPeople].sort((a, b) => {
+      const aMins = a.lastSeenAt ? Math.floor((Date.now() - new Date(a.lastSeenAt).getTime()) / 60000) : 999;
+      const aLive = a.isOnline || aMins < 5;
+      const bMins = b.lastSeenAt ? Math.floor((Date.now() - new Date(b.lastSeenAt).getTime()) / 60000) : 999;
+      const bLive = b.isOnline || bMins < 5;
+      
+      if (aLive && !bLive) return -1;
+      if (!aLive && bLive) return 1;
+      return a.distanceMeter - b.distanceMeter;
+    });
+    const topIndividuals = sortedByPriority.slice(0, 8);
 
     // 8 Pre-computed non-overlapping orbital slots around the radar circle
     // Formed of 2 distinct rings (Inner ring @ 26% radius, Outer ring @ 38% radius)
@@ -310,7 +319,7 @@ export default function RadarView({
       return { ...p, x, y };
     });
 
-    const remainingAvatars = sortedByDistance.slice(8, 11).map(p => p.avatar);
+    const remainingAvatars = sortedByPriority.slice(8, 11).map(p => p.avatar);
     return { individualPins: pins, overflowAvatars: remainingAvatars };
   }, [filteredPeople, effectiveRadius]);
 
@@ -375,7 +384,7 @@ export default function RadarView({
 
           return (
             <div key={peer.id} onClick={() => setSelectedPerson(peer)}
-              className="card p-3.5 w-[138px] sm:w-[152px] shrink-0 snap-start bg-[var(--bg-elevated)]/95 backdrop-blur-md border border-[var(--border-subtle)] rounded-3xl flex flex-col items-center text-center hover:border-[var(--accent)] transition-all cursor-pointer relative shadow-sm group">
+              className="card p-3.5 w-[138px] sm:w-[152px] shrink-0 snap-start bg-[var(--bg-elevated)] border border-[var(--border-subtle)] rounded-3xl flex flex-col items-center text-center hover:border-[var(--accent)] transition-all cursor-pointer relative shadow-sm group">
               
               {/* Instagram Story Gradient Ring + Profile Pic */}
               <div className="relative mt-1">
@@ -438,10 +447,10 @@ export default function RadarView({
             🛰️
           </div>
           <h3 className="text-base font-black text-[var(--text-primary)]">
-            Be the First Student on Radar here in {currentCity.name.split(' (')[0]}! 🚀
+            Be the First Person on Radar here in {currentCity.name.split(' (')[0]}! 🚀
           </h3>
           <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
-            We are waiting for peers to check in across this exact radius. Broadcast your profile so nearby students can connect with you right now!
+            We are waiting for peers to check in across this exact radius. Broadcast your profile so nearby people can connect with you right now!
           </p>
           <div className="flex items-center justify-center gap-2 pt-1">
             <button
@@ -552,7 +561,10 @@ export default function RadarView({
                   >
                     {isSelected && isNearBottom && (
                       <div className="px-2 py-1 rounded-xl bg-[var(--bg-card-solid)] border border-[var(--border-subtle)] shadow-2xl mb-1 flex items-center gap-1.5 animate-scale-in z-50">
-                        <span className="text-xs font-bold text-[var(--text-primary)] whitespace-nowrap">{p.name.split(' ')[0]}</span>
+                        <div className="flex flex-col">
+                          <span className="text-xs font-bold text-[var(--text-primary)] whitespace-nowrap">{p.name.split(' ')[0]}</span>
+                          {!isLive && <span className="text-[8px] font-bold text-amber-500/90 whitespace-nowrap">Seen {activeLabel}</span>}
+                        </div>
                         <div className="flex items-center gap-1 border-l border-[var(--border-subtle)] pl-1.5">
                           <button onClick={(e) => { e.stopPropagation(); onOpenChatWithPerson(p); }} title="Message"
                             className="p-1 rounded-md bg-[var(--accent)]/15 text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white transition-colors">
@@ -574,16 +586,17 @@ export default function RadarView({
                         }`} />
                       <span className={`absolute -bottom-0.5 -right-0.5 rounded-full border-2 border-[var(--bg-primary)] ${
                         isSelected ? 'h-3.5 w-3.5' : 'h-2.5 w-2.5'
-                      } ${
-                        p.status === 'Online' || p.status === 'Walking on Road' ? 'bg-[var(--accent-green)]' : 'bg-[var(--accent-amber)]'
-                      }`} />
+                      } ${isLive ? 'bg-[var(--accent-green)]' : 'bg-amber-500'}`} />
                     </div>
 
                     {isSelected && !isNearBottom ? (
                       <div className="px-2 py-1 rounded-xl bg-[var(--bg-card-solid)] border border-[var(--border-subtle)] shadow-2xl mt-1 flex items-center gap-1.5 animate-scale-in z-50">
-                        <span className="text-xs font-bold text-[var(--text-primary)] whitespace-nowrap">
-                          {p.name.split(' ')[0]} <span className="text-[var(--accent)] font-extrabold">({p.distanceMeter < 1000 ? `${p.distanceMeter}m` : `${(p.distanceMeter/1000).toFixed(1)}km`})</span>
-                        </span>
+                        <div className="flex flex-col">
+                          <span className="text-xs font-bold text-[var(--text-primary)] whitespace-nowrap">
+                            {p.name.split(' ')[0]} <span className="text-[var(--accent)] font-extrabold">({p.distanceMeter < 1000 ? `${p.distanceMeter}m` : `${(p.distanceMeter/1000).toFixed(1)}km`})</span>
+                          </span>
+                          {!isLive && <span className="text-[8px] font-bold text-amber-500/90 whitespace-nowrap">Seen {activeLabel}</span>}
+                        </div>
                         <div className="flex items-center gap-1 border-l border-[var(--border-subtle)] pl-1.5">
                           <button onClick={(e) => { e.stopPropagation(); onOpenChatWithPerson(p); }} title="Message"
                             className="p-1 rounded-md bg-[var(--accent)]/15 text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white transition-colors">
@@ -597,10 +610,13 @@ export default function RadarView({
                         </div>
                       </div>
                     ) : !isSelected ? (
-                      <span className="text-[10px] font-extrabold text-[var(--text-secondary)] whitespace-nowrap mt-0.5 drop-shadow flex items-center gap-0.5">
-                        <span>{p.name.split(' ')[0]}</span>
-                        <span className="text-[var(--accent)] font-black">· {p.distanceMeter < 1000 ? `${p.distanceMeter}m` : `${(p.distanceMeter/1000).toFixed(1)}km`}</span>
-                      </span>
+                      <div className="flex flex-col items-center mt-0.5">
+                        <span className="text-[10px] font-extrabold text-[var(--text-secondary)] whitespace-nowrap drop-shadow flex items-center gap-0.5">
+                          <span>{p.name.split(' ')[0]}</span>
+                          <span className="text-[var(--accent)] font-black">· {p.distanceMeter < 1000 ? `${p.distanceMeter}m` : `${(p.distanceMeter/1000).toFixed(1)}km`}</span>
+                        </span>
+                        {!isLive && <span className="text-[8px] font-bold text-amber-500/90 whitespace-nowrap drop-shadow-sm -mt-0.5">Seen {activeLabel}</span>}
+                      </div>
                     ) : null}
                   </motion.div>
                 );
@@ -795,7 +811,7 @@ export default function RadarView({
                     <span className="badge badge-purple text-xs">Filter: {selectedHubFilter} ✕</span>
                   )}
                 </h3>
-                <p className="text-xs text-[var(--text-tertiary)] mt-0.5">Explore all students currently active within {selectedRadius}m</p>
+                <p className="text-xs text-[var(--text-tertiary)] mt-0.5">Explore all people currently active within {selectedRadius}m</p>
               </div>
 
               <div className="flex items-center gap-2">
@@ -819,7 +835,7 @@ export default function RadarView({
 
             {selectedHubFilter !== 'All Hubs' && (
               <div className="flex items-center gap-2 text-xs text-[var(--accent)] font-semibold pb-1">
-                <span>Showing only students at {selectedHubFilter}.</span>
+                <span>Showing only people at {selectedHubFilter}.</span>
                 <button onClick={() => setSelectedHubFilter('All Hubs')} className="underline">Show All ({activePeopleList.length})</button>
               </div>
             )}
@@ -853,10 +869,7 @@ export default function RadarView({
                       <p className="text-xs text-[var(--text-tertiary)] truncate mt-0.5">{p.bio}</p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className={`text-xs font-bold flex items-center gap-1 justify-end ${isLive ? 'text-emerald-500' : isRecent ? 'text-amber-500' : 'text-slate-400'}`}>
-                        {activeLabel}
-                      </p>
-                      <p className="text-[10px] text-[var(--text-tertiary)] mt-0.5">{p.status}</p>
+                      <p className="text-[10px] text-[var(--text-tertiary)] bg-[var(--bg-elevated)] px-2 py-1 rounded-md mt-0.5">{p.status}</p>
                     </div>
                     <ChevronRight className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />
                   </div>

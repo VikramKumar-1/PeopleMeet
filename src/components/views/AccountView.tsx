@@ -37,7 +37,7 @@ export default function AccountView({ currentCity, onOpenListModal, friendReques
               alt="Profile" className="h-16 w-16 rounded-2xl object-cover border-2 border-[var(--accent)] shrink-0 shadow-md" />
             <div className="min-w-0">
               <h3 className="text-lg font-black text-[var(--text-primary)] truncate">
-                {userProfile?.full_name || 'Anonymous Student'}
+                {userProfile?.full_name || 'Anonymous Person'}
               </h3>
               <p className="text-xs font-semibold text-[var(--accent)] flex items-center gap-1 mt-0.5">
                 <MapPin className="h-3.5 w-3.5" /> {userProfile?.locality_hub || currentCity.defaultHub} · {currentCity.name.split(' (')[0]}
@@ -69,7 +69,7 @@ export default function AccountView({ currentCity, onOpenListModal, friendReques
             onClick={() => setIsAuthModalOpen(true)}
             className="w-full mt-4 py-2.5 rounded-xl bg-gradient-to-r from-[var(--accent)] to-blue-600 text-white text-xs font-black shadow-md hover:brightness-110 transition-all flex items-center justify-center gap-2"
           >
-            <LogIn className="h-4 w-4" /> Sign In / Create Student Profile to Broadcast on Radar 🚀
+            <LogIn className="h-4 w-4" /> Sign In / Create Profile to Broadcast on Radar 🚀
           </button>
         )}
 
