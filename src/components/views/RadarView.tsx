@@ -354,10 +354,9 @@ export default function RadarView({
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-base font-bold text-[var(--text-primary)] flex items-center gap-1.5">
-            <Sparkles className="h-4 w-4 text-[var(--accent-amber)]" /> Suggested Friend Requests
+          <h3 className="text-base font-bold text-[var(--text-primary)]">
+            Suggested people near you
           </h3>
-          <p className="text-xs text-[var(--text-tertiary)] mt-0.5">Updated daily · Nearest study partners</p>
         </div>
       </div>
 
@@ -485,15 +484,7 @@ export default function RadarView({
             </div>
           </div>
 
-          {effectiveRadius > selectedRadius && (
-            <div className="p-2.5 rounded-xl bg-[var(--accent)]/10 border border-[var(--accent)]/30 text-[var(--accent)] text-xs font-semibold flex items-center justify-between gap-2 shadow-sm animate-fade-in">
-              <div className="flex items-center gap-1.5">
-                <span className="animate-pulse">⚡</span>
-                <span><strong>Smart Dynamic Range:</strong> Auto-adapted to {effectiveRadius >= 1000 ? (effectiveRadius / 1000) + 'km' : effectiveRadius + 'm'} as user base grows.</span>
-              </div>
-              <button onClick={() => setSelectedRadius(effectiveRadius)} className="underline text-[10px] whitespace-nowrap">Lock Range</button>
-            </div>
-          )}
+
 
           <div className="flex overflow-x-auto no-scrollbar gap-1.5">
             {genderOptions.map((g) => (
