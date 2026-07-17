@@ -1,15 +1,15 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Sparkles, MapPin, UserPlus, LogIn, CheckCircle2, ShieldCheck, Mail, Lock, User, Heart, Camera, Upload, RefreshCw, Check } from 'lucide-react';
-import { supabase, updateUserLocation } from '@/utils/supabase';
+import { X, Sparkles, MapPin, UserPlus, LogIn, CheckCircle2, ShieldCheck, Mail, Lock, User, Camera, Upload, RefreshCw, Check } from 'lucide-react';
+import { supabase } from '@/utils/supabase';
 import { CityHub } from '@/types';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onProfileCreated?: (profile: any) => void;
+  onProfileCreated?: (profile: { id: string; full_name?: string; avatar_url?: string; [key: string]: unknown }) => void;
   isMandatory?: boolean;
   currentCity?: CityHub | null;
 }
@@ -97,12 +97,14 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
       if (saved) {
         try {
           const profile = JSON.parse(saved);
-          if (profile.full_name) setFullName(profile.full_name);
-          if (profile.gender) setGender(profile.gender);
-          if (profile.locality_hub) setLocality(profile.locality_hub);
-          if (profile.bio) setBio(profile.bio);
-          if (profile.avatar_url) setCustomAvatar(profile.avatar_url);
-        } catch (e) {}
+          queueMicrotask(() => {
+            if (profile.full_name) setFullName(profile.full_name);
+            if (profile.gender) setGender(profile.gender);
+            if (profile.locality_hub) setLocality(profile.locality_hub);
+            if (profile.bio) setBio(profile.bio);
+            if (profile.avatar_url) setCustomAvatar(profile.avatar_url);
+          });
+        } catch {}
       }
     }
   }, [isOpen]);
@@ -126,7 +128,7 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
           } else {
             setLocality(`GPS (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`);
           }
-        } catch (err) {
+        } catch {
           setLocality(`Live Hub (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`);
         } finally {
           setDetectingLocality(false);
@@ -176,7 +178,7 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
             setLoading(false);
             return;
           }
-        } catch (err) {}
+        } catch {}
       }
     }
 
@@ -197,7 +199,7 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
             const c = JSON.parse(savedCoords);
             if (c.lat && c.lng) { realLat = c.lat; realLng = c.lng; locSource = 'gps'; }
           }
-        } catch (e) {}
+        } catch {}
 
         const resolvedCityId = currentCity?.id || 'ranchi';
 
@@ -255,7 +257,7 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
             const c = JSON.parse(savedCoords);
             if (c.lat && c.lng) { realLat = c.lat; realLng = c.lng; locSource = 'gps'; }
           }
-        } catch (e) {}
+        } catch {}
 
         const resolvedCityId = currentCity?.id || 'ranchi';
 
@@ -317,10 +319,11 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
         setSuccessMsg('Successfully signed in!');
         setTimeout(() => onClose(), 1000);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Auth error:', err);
-      const msg = err?.message || '';
-      if (msg.toLowerCase().includes('already') || msg.toLowerCase().includes('registered') || err?.status === 422 || err?.code === 'user_already_exists') {
+      const errorObj = err as { message?: string; status?: number; code?: string } | undefined;
+      const msg = errorObj?.message || '';
+      if (msg.toLowerCase().includes('already') || msg.toLowerCase().includes('registered') || errorObj?.status === 422 || errorObj?.code === 'user_already_exists') {
         setErrorMsg('⚠️ This email address is already registered! Please sign in instead or use another unique email.');
       } else {
         setErrorMsg(msg || 'Error processing request');
@@ -547,7 +550,7 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
                     </label>
                     <select
                       value={gender}
-                      onChange={(e: any) => setGender(e.target.value)}
+                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setGender(e.target.value as 'Boys' | 'Girls' | 'Others')}
                       className="w-full px-3.5 py-2.5 text-[16px] sm:text-xs bg-black/50 border border-white/10 rounded-xl text-white font-semibold focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all cursor-pointer"
                     >
                       <option value="Boys" className="bg-[#090c15]">Boys / Male</option>

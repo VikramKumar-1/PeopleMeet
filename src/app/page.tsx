@@ -12,7 +12,7 @@ import TiffinView from '@/components/views/TiffinView';
 import AccountView from '@/components/views/AccountView';
 import { CITIES, RADAR_PEOPLE, PG_LISTINGS, FLAT_LISTINGS, TIFFIN_LISTINGS } from '@/data/mockData';
 import AuthModal from '@/components/AuthModal';
-import { isSupabaseReady, fetchLiveProfiles, seedInitialSupabaseData, supabase, updateUserLocation, markUserOffline, sendRealtimeMessage, subscribeToRealtimeChat } from '@/utils/supabase';
+import { isSupabaseReady, fetchLiveProfiles, seedInitialSupabaseData, supabase, updateUserLocation, markUserOffline, sendRealtimeMessage, subscribeToRealtimeChat, haversineDistance } from '@/utils/supabase';
 import { CityHub, RadarPerson, ChatMessage } from '@/types';
 import { CheckCircle2, X, MapPin } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -368,9 +368,27 @@ export default function Home() {
 
   const currentCityPeople = useMemo(() => {
     const list = currentCity ? livePeopleList.filter((p) => p.cityId === currentCity.id) : livePeopleList;
-    if (!myProfileId) return list;
-    return list.filter((p) => p.id !== myProfileId && !p.id.includes(myProfileId));
-  }, [currentCity, livePeopleList, myProfileId]);
+    
+    // Determine our exact reference point for calculating real-world meters:
+    // 1. If live browser GPS coordinates (userCoords) are available, use them!
+    // 2. Otherwise, use our active City/Hub municipal coordinates as the precise reference.
+    const baseLat = userCoords?.lat ?? currentCity?.coordinates?.lat ?? 23.3641;
+    const baseLng = userCoords?.lng ?? currentCity?.coordinates?.lng ?? 85.3196;
+
+    const calculatedList = list.map((p) => {
+      if (p.coordinates && p.coordinates.lat && p.coordinates.lng) {
+        const exactMeters = haversineDistance(baseLat, baseLng, p.coordinates.lat, p.coordinates.lng);
+        return {
+          ...p,
+          distanceMeter: Math.max(1, exactMeters), // Ensure exact distance in meters is shown
+        };
+      }
+      return p;
+    });
+
+    if (!myProfileId) return calculatedList;
+    return calculatedList.filter((p) => p.id !== myProfileId && !p.id.includes(myProfileId));
+  }, [currentCity, livePeopleList, myProfileId, userCoords]);
 
   return (
     <div className="min-h-screen flex flex-col">
