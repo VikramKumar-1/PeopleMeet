@@ -341,7 +341,7 @@ export default function RadarView({
         </button>
       </div>
 
-      <div className="space-y-2.5">
+      <div className="flex overflow-x-auto pb-3 pt-1 gap-3.5 no-scrollbar scroll-smooth snap-x snap-mandatory">
         {suggestions.map((peer) => {
           // Freshness badge logic (production-level)
           const lastSeen = peer.lastSeenAt ? new Date(peer.lastSeenAt) : null;
@@ -349,54 +349,54 @@ export default function RadarView({
           const isLive = peer.isOnline || minsAgo < 5;
           const isRecent = !isLive && minsAgo < 120;
           const freshnessColor = isLive ? 'bg-emerald-500' : isRecent ? 'bg-amber-400' : 'bg-slate-400';
-          const freshnessLabel = isLive ? 'Live now' : isRecent ? `Active ${minsAgo}m ago` : minsAgo < 1440 ? `Seen ${Math.floor(minsAgo / 60)}h ago` : 'Seen today';
+          const freshnessLabel = isLive ? 'Live now' : isRecent ? `${minsAgo}m ago` : minsAgo < 1440 ? `${Math.floor(minsAgo / 60)}h ago` : 'Seen today';
 
           // Distance display
           const distLabel = peer.distanceMeter < 1000 ? `${peer.distanceMeter}m` : `${(peer.distanceMeter / 1000).toFixed(1)}km`;
 
           return (
             <div key={peer.id} onClick={() => setSelectedPerson(peer)}
-              className="card p-4 cursor-pointer hover:border-[var(--accent)] transition-all">
-              <div className="flex items-start gap-3.5">
-                <div className="relative shrink-0">
-                  <img src={peer.avatar} alt={peer.name}
-                    className="h-14 w-14 rounded-2xl object-cover border border-[var(--border-subtle)]" />
-                  <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-[var(--bg-primary)] ${freshnessColor}`} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <h4 className="text-[15px] font-bold text-[var(--text-primary)] truncate">{peer.name}</h4>
-                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[var(--bg-elevated)] text-[var(--text-tertiary)] border border-[var(--border-subtle)] shrink-0">{distLabel}</span>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-xs font-bold text-[var(--accent)] flex items-center gap-1 justify-end">
-                        📍 {peer.hub || currentCity.defaultHub}
-                      </p>
-                      <p className={`text-[10px] font-medium ${isLive ? 'text-emerald-500' : isRecent ? 'text-amber-500' : 'text-[var(--text-tertiary)]'}`}>{freshnessLabel}</p>
-                    </div>
-                  </div>
-                  <p className="text-xs text-[var(--text-secondary)] mt-1 line-clamp-2">{peer.bio}</p>
-                  <div className="flex gap-2 mt-3">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onSendFriendRequest(peer.id); }}
-                      disabled={friendRequestsSent.includes(peer.id)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
-                        friendRequestsSent.includes(peer.id)
-                          ? 'bg-[var(--accent-green)]/15 text-[var(--accent-green)]'
-                          : 'bg-[var(--accent-purple)]/15 text-[var(--accent-purple)] hover:bg-[var(--accent-purple)]/25'
-                      }`}>
-                      {friendRequestsSent.includes(peer.id)
-                        ? <><Check className="h-3.5 w-3.5" /> Added</>
-                        : <><UserPlus className="h-3.5 w-3.5" /> Add Friend</>
-                      }
-                    </button>
-                    <button onClick={(e) => { e.stopPropagation(); onOpenChatWithPerson(peer); }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--accent)]/15 text-[var(--accent)] text-xs font-bold hover:bg-[var(--accent)]/25 transition-colors">
-                      <MessageCircle className="h-3.5 w-3.5" /> Message
-                    </button>
-                  </div>
-                </div>
+              className="card p-3.5 w-[145px] sm:w-[155px] shrink-0 snap-start bg-[var(--bg-elevated)] border border-[var(--border-subtle)] rounded-2xl flex flex-col items-center text-center hover:border-[var(--accent)] transition-all cursor-pointer relative shadow-sm group">
+              
+              {/* Profile Pic with Live/Active Dot */}
+              <div className="relative mt-1">
+                <img src={peer.avatar} alt={peer.name}
+                  className="h-16 w-16 rounded-full object-cover border-2 border-[var(--border-subtle)] shadow-sm group-hover:scale-105 transition-transform" />
+                <span className={`absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 border-[var(--bg-elevated)] ${freshnessColor}`} title={freshnessLabel} />
+              </div>
+
+              {/* Name & Proximity */}
+              <h4 className="text-[13px] font-bold text-[var(--text-primary)] truncate w-full mt-2.5">{peer.name}</h4>
+              <p className="text-[11px] font-semibold text-[var(--accent)] truncate w-full mt-0.5">
+                📍 {distLabel}
+              </p>
+              <p className="text-[10px] text-[var(--text-tertiary)] truncate w-full">
+                {peer.hub || currentCity.defaultHub}
+              </p>
+
+              {/* Action Icons Only (Add & Message) */}
+              <div className="flex items-center justify-center gap-2.5 mt-3 pt-2 border-t border-[var(--border-subtle)]/60 w-full">
+                <button
+                  onClick={(e) => { e.stopPropagation(); onSendFriendRequest(peer.id); }}
+                  disabled={friendRequestsSent.includes(peer.id)}
+                  title={friendRequestsSent.includes(peer.id) ? "Added" : "Add Friend"}
+                  className={`h-9 w-9 rounded-full flex items-center justify-center transition-all ${
+                    friendRequestsSent.includes(peer.id)
+                      ? 'bg-[var(--accent-green)]/15 text-[var(--accent-green)]'
+                      : 'bg-[var(--accent-purple)]/15 text-[var(--accent-purple)] hover:bg-[var(--accent-purple)]/30 hover:scale-110 shadow-sm'
+                  }`}>
+                  {friendRequestsSent.includes(peer.id)
+                    ? <Check className="h-4 w-4" />
+                    : <UserPlus className="h-4 w-4" />
+                  }
+                </button>
+
+                <button
+                  onClick={(e) => { e.stopPropagation(); onOpenChatWithPerson(peer); }}
+                  title="Send Message"
+                  className="h-9 w-9 rounded-full bg-[var(--accent)]/15 text-[var(--accent)] flex items-center justify-center hover:bg-[var(--accent)]/30 hover:scale-110 transition-all shadow-sm">
+                  <MessageCircle className="h-4 w-4" />
+                </button>
               </div>
             </div>
           );
@@ -708,67 +708,70 @@ export default function RadarView({
       {/* Selected Person Action Modal (Fixed Center Overlay) */}
       <AnimatePresence>
         {selectedPerson && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/65 backdrop-blur-sm animate-fade-in"
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in"
                onClick={() => setSelectedPerson(null)}>
             <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="card p-6 border-2 border-[var(--accent)] shadow-2xl relative w-full max-w-md bg-[var(--bg-card-solid)] overflow-hidden"
+              className="card p-3 sm:p-4 border border-[var(--border-subtle)] shadow-2xl relative w-full max-w-sm bg-[var(--bg-card-solid)] rounded-3xl overflow-hidden flex flex-col items-center"
             >
-              <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[var(--accent)] via-purple-500 to-blue-500" />
+              {/* Close Button floating over photo */}
               <button
                 onClick={() => setSelectedPerson(null)}
-                className="absolute top-4 right-4 p-2 rounded-xl bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:text-white hover:bg-red-500/20 transition-all"
+                className="absolute top-5 right-5 z-10 p-2 rounded-full bg-black/60 text-white hover:bg-red-500 transition-all backdrop-blur-sm shadow-md"
                 title="Close"
               >
                 <X className="h-5 w-5" />
               </button>
 
-              <div className="flex items-center gap-4 mt-2">
+              {/* Large Full-Screen Profile Pic Viewer ("sirf modal mei pic") */}
+              <div className="w-full relative aspect-[4/5] max-h-[360px] sm:max-h-[420px] rounded-2xl overflow-hidden bg-black/40 border border-[var(--border-subtle)] shadow-inner">
                 <img src={selectedPerson.avatar} alt={selectedPerson.name}
-                  className="h-20 w-20 rounded-2xl object-cover border-2 border-[var(--accent)] shadow-md shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h4 className="text-xl font-black text-[var(--text-primary)] truncate">{selectedPerson.name}</h4>
-                    <span className="badge badge-blue shrink-0">{selectedPerson.gender}</span>
+                  className="w-full h-full object-cover" />
+                
+                {/* Gradient overlay at bottom of photo for text legibility */}
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent pt-12 pb-3 px-4 flex flex-col justify-end text-left">
+                  <div className="flex items-center justify-between gap-2">
+                    <h4 className="text-xl font-black text-white truncate drop-shadow-md">{selectedPerson.name}</h4>
+                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-white/20 text-white backdrop-blur-md border border-white/30 shrink-0">{selectedPerson.gender}</span>
                   </div>
-                  <p className="text-xs font-bold text-[var(--accent-green)] mt-1 flex items-center gap-1.5">
-                    <span className="h-2 w-2 rounded-full bg-[var(--accent-green)] inline-block" />
-                    🟢 {selectedPerson.status || 'Verified Student'}
-                  </p>
-                  <p className="text-xs font-semibold text-[var(--text-tertiary)] mt-1 flex items-center gap-1">
-                    <MapPin className="h-3.5 w-3.5 text-[var(--accent)]" /> Locality: <strong className="text-[var(--text-primary)]">{selectedPerson.hub}</strong>
+                  <p className="text-xs font-semibold text-emerald-300 mt-1 flex items-center gap-1.5 drop-shadow">
+                    <span className="h-2 w-2 rounded-full bg-emerald-400 inline-block animate-pulse" />
+                    📍 {selectedPerson.distanceMeter < 1000 ? `${selectedPerson.distanceMeter}m` : `${(selectedPerson.distanceMeter / 1000).toFixed(1)}km`} · {selectedPerson.hub}
                   </p>
                 </div>
               </div>
 
-              <div className="mt-4 p-3.5 rounded-xl bg-[var(--bg-elevated)]/60 border border-[var(--border-subtle)]">
-                <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-1">About & Prep Bio</p>
-                <p className="text-sm text-[var(--text-primary)] leading-relaxed">{selectedPerson.bio}</p>
-              </div>
+              {/* Optional short bio */}
+              {selectedPerson.bio && (
+                <p className="text-xs text-[var(--text-secondary)] mt-3 text-center px-2 line-clamp-2 italic">
+                  "{selectedPerson.bio}"
+                </p>
+              )}
 
-              <div className="flex gap-3 mt-6">
+              {/* Action Buttons (Add & Message) */}
+              <div className="flex gap-3 mt-3.5 w-full">
                 <button
                   onClick={() => { onSendFriendRequest(selectedPerson.id); }}
                   disabled={friendRequestsSent.includes(selectedPerson.id)}
-                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all shadow-md ${
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-all shadow-md ${
                     friendRequestsSent.includes(selectedPerson.id)
                       ? 'bg-[var(--accent-green)]/20 text-[var(--accent-green)] border border-[var(--accent-green)]/40'
                       : 'bg-[var(--accent-purple)] text-white hover:opacity-90 active:scale-95'
                   }`}
                 >
                   {friendRequestsSent.includes(selectedPerson.id) ? (
-                    <><Check className="h-4 w-4" /> Request Sent</>
+                    <><Check className="h-4 w-4" /> Added</>
                   ) : (
-                    <><UserPlus className="h-4 w-4" /> Add / Wave 👋</>
+                    <><UserPlus className="h-4 w-4" /> Add Friend</>
                   )}
                 </button>
 
                 <button
                   onClick={() => { const p = selectedPerson; setSelectedPerson(null); onOpenChatWithPerson(p); }}
-                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-[var(--accent)] to-blue-600 text-white text-sm font-bold hover:brightness-110 active:scale-95 transition-all shadow-md"
+                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-gradient-to-r from-[var(--accent)] to-blue-600 text-white text-xs sm:text-sm font-bold hover:brightness-110 active:scale-95 transition-all shadow-md"
                 >
-                  <MessageCircle className="h-4 w-4" /> Message 💬
+                  <MessageCircle className="h-4 w-4" /> Message
                 </button>
               </div>
             </motion.div>
