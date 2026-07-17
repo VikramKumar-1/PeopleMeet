@@ -26,10 +26,12 @@ export default function Navbar({
   onToggleTheme,
 }: NavbarProps) {
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-[var(--border-subtle)] pt-safe"
-      style={{ background: 'var(--glass-bg)', backdropFilter: `blur(var(--glass-blur))`, WebkitBackdropFilter: `blur(var(--glass-blur))` }}>
-      <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
-        {/* Left: Logo */}
+    <header className="sticky top-0 z-40 w-full pt-safe flex flex-col pointer-events-none">
+      {/* Main Top Navbar */}
+      <div className="w-full pointer-events-auto border-b border-[var(--border-subtle)]"
+           style={{ background: 'var(--glass-bg)', backdropFilter: `blur(var(--glass-blur))`, WebkitBackdropFilter: `blur(var(--glass-blur))` }}>
+        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
+          {/* Left: Logo */}
         <div className="flex items-center gap-3">
           <span className="text-lg font-black tracking-tight flex items-center gap-1" style={{ color: 'var(--text-primary)' }}>
             Stay<span style={{ color: 'var(--accent)' }}>&amp;</span>Dine
@@ -71,13 +73,17 @@ export default function Navbar({
             <User className="h-5 w-5" />
           </button>
         </div>
+        </div>
       </div>
 
       {/* Blinkit / Instamart Style Location Capsule Below Navbar */}
-      <div className="w-full px-3 pb-2 bg-transparent flex justify-center pointer-events-none">
+      <div className="relative w-full px-3 py-2 bg-transparent flex justify-center pointer-events-none">
+        {/* Scroll Mask Behind Capsule */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[var(--bg-primary)] to-transparent opacity-90 -z-10" />
         <div
           onClick={onOpenCitySelector}
-          className="w-full max-w-lg px-3 py-1.5 border border-[var(--border-subtle)] rounded-full bg-[var(--bg-primary)]/75 backdrop-blur-md flex items-center justify-between text-[11px] cursor-pointer transition-all shadow-sm pointer-events-auto"
+          className="w-full max-w-lg px-3 py-1.5 border border-[var(--border-subtle)] rounded-full backdrop-blur-md flex items-center justify-between text-[11px] cursor-pointer transition-all shadow-sm pointer-events-auto"
+          style={{ background: 'var(--glass-bg)' }}
         >
           <div className="flex items-center gap-1.5 min-w-0 max-w-[75%] sm:max-w-md">
             <MapPin className="h-3 w-3 shrink-0 text-emerald-500" />
@@ -100,9 +106,6 @@ export default function Navbar({
           </div>
         </div>
       </div>
-
-      {/* Scroll Fade Mask (Blinkit Style) */}
-      <div className="absolute top-full left-0 right-0 h-8 bg-gradient-to-b from-[var(--bg-primary)] to-transparent pointer-events-none opacity-90" />
     </header>
   );
 }
