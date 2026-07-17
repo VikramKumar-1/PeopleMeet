@@ -135,7 +135,8 @@ export default function RadarView({
       setGpsStatus('active');
     }
 
-    // Silently refresh high accuracy GPS in the background if possible
+    // Continuous Real-Time GPS Tracking ("chaahe bike ya fir walk toh wo 50 meter uske paas se calculate hote rehna chahiye")
+    let watchId: number | null = null;
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -147,7 +148,19 @@ export default function RadarView({
         () => {},
         { enableHighAccuracy: true, timeout: 6000, maximumAge: 60000 }
       );
+
+      watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          setUserCoords(coords);
+          setGpsStatus('active');
+          localStorage.setItem('stay_dine_last_coords', JSON.stringify(coords));
+        },
+        () => {},
+        { enableHighAccuracy: true, maximumAge: 3000 }
+      );
     }
+    return () => { if (watchId !== null && 'geolocation' in navigator) navigator.geolocation.clearWatch(watchId); };
   }, [currentCity]);
 
   const [myProfileId, setMyProfileId] = useState<string | null>(null);
@@ -170,20 +183,68 @@ export default function RadarView({
   }, []);
 
   const activePeopleList = useMemo(() => {
-    const list = isSimulating200Plus
+    let list = isSimulating200Plus
       ? generate200PlusPeers(people, currentCity.id)
       : people.filter(p => p.cityId === currentCity.id);
 
     // Exclude own profile so user does not see their own card ("own profile why it showing on radar dusra user na dekhega")
     if (!myProfileId) return list;
-    return list.filter(p => p.id !== myProfileId && !p.id.includes(myProfileId));
-  }, [people, currentCity.id, isSimulating200Plus, myProfileId]);
+    list = list.filter(p => p.id !== myProfileId && !p.id.includes(myProfileId));
 
-  // All people matching filters
+    // EXACT LIVE GEODESIC DISTANCE RECALCULATION FROM USER ("uske paas se calculate hote rehna chahiye")
+    if (userCoords && userCoords.lat && userCoords.lng) {
+      const calculateHaversineMeters = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+        const R = 6371e3; // Earth radius in meters
+        const φ1 = (lat1 * Math.PI) / 180;
+        const φ2 = (lat2 * Math.PI) / 180;
+        const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+        const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+        const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return Math.round(R * c);
+      };
+
+      return list.map(p => {
+        if (p.coordinates && p.coordinates.lat && p.coordinates.lng) {
+          const exactMeters = calculateHaversineMeters(userCoords.lat, userCoords.lng, p.coordinates.lat, p.coordinates.lng);
+          return { ...p, distanceMeter: exactMeters };
+        }
+        return p;
+      });
+    }
+    return list;
+  }, [people, currentCity.id, isSimulating200Plus, myProfileId, userCoords]);
+
+  // Dynamic Smart Range Adaptation ("jaise jaise user badhte jayega waise waise range uske sath badhte jayega")
+  const effectiveRadius = useMemo(() => {
+    // If user explicitly selected a tight proximity filter (like 50m, 100m, 500m), honor exact distance strictly when walking or moving!
+    if (selectedRadius <= 500) return selectedRadius;
+
+    // Count exact matches at current selectedRadius
+    const exactCount = activePeopleList.filter(p => {
+      if (selectedGender !== 'All' && p.gender !== selectedGender) return false;
+      if (selectedHubFilter !== 'All Localities' && selectedHubFilter !== 'All Hubs' && p.hub !== selectedHubFilter) return false;
+      return p.distanceMeter <= selectedRadius;
+    }).length;
+
+    // Automatically expand radius dynamically to connect peers without dead zones on broader exploration
+    if (exactCount < 4 && selectedRadius < 50000) {
+      const steps = [1000, 2000, 5000, 10000, 25000, 50000];
+      for (const step of steps) {
+        if (step > selectedRadius) {
+          const count = activePeopleList.filter(p => p.distanceMeter <= step).length;
+          if (count >= 3 || step === 50000) return step;
+        }
+      }
+    }
+    return selectedRadius;
+  }, [activePeopleList, selectedGender, selectedRadius, selectedHubFilter]);
+
+  // All people matching filters (`using dynamic effectiveRadius`)
   const filteredPeople = useMemo(() => {
     return activePeopleList.filter((p) => {
       if (selectedGender !== 'All' && p.gender !== selectedGender) return false;
-      if (p.distanceMeter > selectedRadius) return false;
+      if (p.distanceMeter > effectiveRadius) return false;
       if (selectedHubFilter !== 'All Localities' && selectedHubFilter !== 'All Hubs' && p.hub !== selectedHubFilter) return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
@@ -191,7 +252,7 @@ export default function RadarView({
       }
       return true;
     });
-  }, [activePeopleList, selectedGender, selectedRadius, selectedHubFilter, searchQuery]);
+  }, [activePeopleList, selectedGender, effectiveRadius, selectedHubFilter, searchQuery]);
 
   const availableHubs = useMemo(() => {
     const set = new Set<string>();
@@ -227,14 +288,33 @@ export default function RadarView({
 
     const remainingAvatars = sortedByDistance.slice(8, 11).map(p => p.avatar);
     return { individualPins: pins, overflowAvatars: remainingAvatars };
-  }, [filteredPeople, selectedRadius]);
+  }, [filteredPeople, effectiveRadius]);
 
   const extraCount = Math.max(0, filteredPeople.length - individualPins.length);
 
-  // Suggested peers strictly obeying the user's selected radius filter (e.g. <= 50m next door)
+  // Suggested peers: Nearest first, daily rotation, max 8 ("nearest wala pehle then uske dur")
   const suggestions = useMemo(() => {
-    return filteredPeople.slice(0, 5);
-  }, [filteredPeople]);
+    // Sort ALL city peers by distance (nearest first → farthest = entire city)
+    const sortedAll = [...activePeopleList].sort((a, b) => a.distanceMeter - b.distanceMeter);
+
+    // Daily seed: same suggestions throughout the day, changes next day
+    const today = new Date().toDateString();
+    let seed = 0;
+    for (let i = 0; i < today.length; i++) seed = ((seed << 5) - seed + today.charCodeAt(i)) | 0;
+    seed = Math.abs(seed) + shuffleSeed;
+
+    // Take nearest 24 people, then pick 8 using daily seed rotation
+    const pool = sortedAll.slice(0, 24);
+    const dailyOffset = seed % Math.max(1, pool.length - 7);
+    const selected = pool.slice(dailyOffset, dailyOffset + 8);
+    // If not enough from offset, wrap around
+    if (selected.length < 8) {
+      const remaining = pool.filter(p => !selected.includes(p));
+      selected.push(...remaining.slice(0, 8 - selected.length));
+    }
+    // Always sort final selection by distance (nearest first)
+    return selected.sort((a, b) => a.distanceMeter - b.distanceMeter).slice(0, 8);
+  }, [activePeopleList, shuffleSeed]);
 
   const genderOptions = ['All', 'Boys', 'Girls', 'Others'];
   const radiusOptions = [
@@ -262,49 +342,65 @@ export default function RadarView({
       </div>
 
       <div className="space-y-2.5">
-        {suggestions.map((peer) => (
-          <div key={peer.id} onClick={() => setSelectedPerson(peer)}
-            className="card p-4 cursor-pointer hover:border-[var(--accent)] transition-all">
-            <div className="flex items-start gap-3.5">
-              <img src={peer.avatar} alt={peer.name}
-                className="h-14 w-14 rounded-2xl object-cover border border-[var(--border-subtle)] shrink-0" />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <h4 className="text-[15px] font-bold text-[var(--text-primary)] truncate">{peer.name}</h4>
-                    <span className="text-[11px] font-medium text-[var(--text-tertiary)] shrink-0">{peer.gender}</span>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-xs font-bold text-[var(--accent)] flex items-center gap-1 justify-end">
-                      📍 {peer.hub || currentCity.defaultHub}
-                    </p>
-                    <p className="text-[10px] text-[var(--text-tertiary)]">{peer.status || 'Verified Peer'}</p>
-                  </div>
+        {suggestions.map((peer) => {
+          // Freshness badge logic (production-level)
+          const lastSeen = peer.lastSeenAt ? new Date(peer.lastSeenAt) : null;
+          const minsAgo = lastSeen ? Math.floor((Date.now() - lastSeen.getTime()) / 60000) : 999;
+          const isLive = peer.isOnline || minsAgo < 5;
+          const isRecent = !isLive && minsAgo < 120;
+          const freshnessColor = isLive ? 'bg-emerald-500' : isRecent ? 'bg-amber-400' : 'bg-slate-400';
+          const freshnessLabel = isLive ? 'Live now' : isRecent ? `Active ${minsAgo}m ago` : minsAgo < 1440 ? `Seen ${Math.floor(minsAgo / 60)}h ago` : 'Seen today';
+
+          // Distance display
+          const distLabel = peer.distanceMeter < 1000 ? `${peer.distanceMeter}m` : `${(peer.distanceMeter / 1000).toFixed(1)}km`;
+
+          return (
+            <div key={peer.id} onClick={() => setSelectedPerson(peer)}
+              className="card p-4 cursor-pointer hover:border-[var(--accent)] transition-all">
+              <div className="flex items-start gap-3.5">
+                <div className="relative shrink-0">
+                  <img src={peer.avatar} alt={peer.name}
+                    className="h-14 w-14 rounded-2xl object-cover border border-[var(--border-subtle)]" />
+                  <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-[var(--bg-primary)] ${freshnessColor}`} />
                 </div>
-                <p className="text-xs text-[var(--text-secondary)] mt-1 line-clamp-2">{peer.bio}</p>
-                <div className="flex gap-2 mt-3">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onSendFriendRequest(peer.id); }}
-                    disabled={friendRequestsSent.includes(peer.id)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
-                      friendRequestsSent.includes(peer.id)
-                        ? 'bg-[var(--accent-green)]/15 text-[var(--accent-green)]'
-                        : 'bg-[var(--accent-purple)]/15 text-[var(--accent-purple)] hover:bg-[var(--accent-purple)]/25'
-                    }`}>
-                    {friendRequestsSent.includes(peer.id)
-                      ? <><Check className="h-3.5 w-3.5" /> Added</>
-                      : <><UserPlus className="h-3.5 w-3.5" /> Add Friend</>
-                    }
-                  </button>
-                  <button onClick={(e) => { e.stopPropagation(); onOpenChatWithPerson(peer); }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--accent)]/15 text-[var(--accent)] text-xs font-bold hover:bg-[var(--accent)]/25 transition-colors">
-                    <MessageCircle className="h-3.5 w-3.5" /> Message
-                  </button>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <h4 className="text-[15px] font-bold text-[var(--text-primary)] truncate">{peer.name}</h4>
+                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[var(--bg-elevated)] text-[var(--text-tertiary)] border border-[var(--border-subtle)] shrink-0">{distLabel}</span>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-xs font-bold text-[var(--accent)] flex items-center gap-1 justify-end">
+                        📍 {peer.hub || currentCity.defaultHub}
+                      </p>
+                      <p className={`text-[10px] font-medium ${isLive ? 'text-emerald-500' : isRecent ? 'text-amber-500' : 'text-[var(--text-tertiary)]'}`}>{freshnessLabel}</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-[var(--text-secondary)] mt-1 line-clamp-2">{peer.bio}</p>
+                  <div className="flex gap-2 mt-3">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onSendFriendRequest(peer.id); }}
+                      disabled={friendRequestsSent.includes(peer.id)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                        friendRequestsSent.includes(peer.id)
+                          ? 'bg-[var(--accent-green)]/15 text-[var(--accent-green)]'
+                          : 'bg-[var(--accent-purple)]/15 text-[var(--accent-purple)] hover:bg-[var(--accent-purple)]/25'
+                      }`}>
+                      {friendRequestsSent.includes(peer.id)
+                        ? <><Check className="h-3.5 w-3.5" /> Added</>
+                        : <><UserPlus className="h-3.5 w-3.5" /> Add Friend</>
+                      }
+                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); onOpenChatWithPerson(peer); }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--accent)]/15 text-[var(--accent)] text-xs font-bold hover:bg-[var(--accent)]/25 transition-colors">
+                      <MessageCircle className="h-3.5 w-3.5" /> Message
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -415,6 +511,16 @@ export default function RadarView({
             </div>
             <span className="badge badge-blue font-bold">{filteredPeople.length} online</span>
           </div>
+
+          {effectiveRadius > selectedRadius && (
+            <div className="p-2.5 rounded-xl bg-[var(--accent)]/10 border border-[var(--accent)]/30 text-[var(--accent)] text-xs font-semibold flex items-center justify-between gap-2 shadow-sm animate-fade-in">
+              <div className="flex items-center gap-1.5">
+                <span className="animate-pulse">⚡</span>
+                <span><strong>Smart Dynamic Range:</strong> Auto-adapted to {effectiveRadius >= 1000 ? (effectiveRadius / 1000) + 'km' : effectiveRadius + 'm'} as user base grows.</span>
+              </div>
+              <button onClick={() => setSelectedRadius(effectiveRadius)} className="underline text-[10px] whitespace-nowrap">Lock Range</button>
+            </div>
+          )}
 
           <div className="flex overflow-x-auto no-scrollbar gap-1.5">
             {genderOptions.map((g) => (

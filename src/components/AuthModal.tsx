@@ -2,16 +2,19 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Sparkles, MapPin, UserPlus, LogIn, CheckCircle2, ShieldCheck, Mail, Lock, User, Heart, Camera, Upload, RefreshCw, Check } from 'lucide-react';
-import { supabase } from '@/utils/supabase';
+import { supabase, updateUserLocation } from '@/utils/supabase';
+import { CityHub } from '@/types';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   onProfileCreated?: (profile: any) => void;
+  isMandatory?: boolean;
+  currentCity?: CityHub | null;
 }
 
-export default function AuthModal({ isOpen, onClose, onProfileCreated }: AuthModalProps) {
+export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandatory, currentCity }: AuthModalProps) {
   const [mode, setMode] = useState<'signup' | 'login'>('signup');
   const [fullName, setFullName] = useState('');
   const [gender, setGender] = useState<'Boys' | 'Girls' | 'Others'>('Boys');
@@ -184,6 +187,20 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated }: AuthMod
           ? 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop&q=80'
           : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80';
 
+        // Capture real GPS for the profile (production-level)
+        let realLat = currentCity?.coordinates?.lat ?? 23.3645;
+        let realLng = currentCity?.coordinates?.lng ?? 85.3195;
+        let locSource: 'gps' | 'signup' = 'signup';
+        try {
+          const savedCoords = localStorage.getItem('stay_dine_last_coords');
+          if (savedCoords) {
+            const c = JSON.parse(savedCoords);
+            if (c.lat && c.lng) { realLat = c.lat; realLng = c.lng; locSource = 'gps'; }
+          }
+        } catch (e) {}
+
+        const resolvedCityId = currentCity?.id || 'ranchi';
+
         const mockProfile = {
           id: `user-${Date.now()}`,
           full_name: fullName.trim() || 'Verified Student',
@@ -191,9 +208,15 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated }: AuthMod
           gender,
           bio: bio || 'Active on Radar',
           locality_hub: locality.trim(),
-          city_id: 'ranchi',
-          lat: 23.3645,
-          lng: 85.3195,
+          city_id: resolvedCityId,
+          lat: realLat,
+          lng: realLng,
+          last_lat: realLat,
+          last_lng: realLng,
+          last_location_at: new Date().toISOString(),
+          location_source: locSource,
+          is_online: true,
+          last_seen_at: new Date().toISOString(),
           status: 'Online',
           avatar_url: customAvatar || defaultAvatar,
         };
@@ -221,16 +244,37 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated }: AuthMod
         if (authError) throw authError;
 
         const userId = authData.user?.id || `u-${Date.now()}`;
+
+        // Capture real GPS for Supabase profile (production-level)
+        let realLat = currentCity?.coordinates?.lat ?? 23.3645;
+        let realLng = currentCity?.coordinates?.lng ?? 85.3195;
+        let locSource: 'gps' | 'signup' = 'signup';
+        try {
+          const savedCoords = localStorage.getItem('stay_dine_last_coords');
+          if (savedCoords) {
+            const c = JSON.parse(savedCoords);
+            if (c.lat && c.lng) { realLat = c.lat; realLng = c.lng; locSource = 'gps'; }
+          }
+        } catch (e) {}
+
+        const resolvedCityId = currentCity?.id || 'ranchi';
+
         const newProfile = {
           id: userId,
           full_name: fullName.trim() || 'New Student',
           email: email.trim().toLowerCase(),
           gender,
           bio: bio.trim() || 'Active peer nearby',
-          city_id: 'ranchi',
+          city_id: resolvedCityId,
           locality_hub: locality.trim(),
-          lat: 23.3645 + (Math.random() - 0.5) * 0.01,
-          lng: 85.3195 + (Math.random() - 0.5) * 0.01,
+          lat: realLat,
+          lng: realLng,
+          last_lat: realLat,
+          last_lng: realLng,
+          last_location_at: new Date().toISOString(),
+          location_source: locSource,
+          is_online: true,
+          last_seen_at: new Date().toISOString(),
           status: 'Online',
           avatar_url: customAvatar || defaultAvatar,
         };
@@ -289,7 +333,7 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated }: AuthMod
   return (
     <div
       className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in font-outfit"
-      onClick={onClose}
+      onClick={isMandatory ? undefined : onClose}
     >
       <motion.div
         initial={{ scale: 0.92, opacity: 0, y: 24 }}
@@ -303,13 +347,22 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated }: AuthMod
           {/* Top glowing ambient accent */}
           <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-64 h-32 bg-gradient-to-r from-purple-600/30 via-indigo-600/30 to-pink-600/30 blur-3xl pointer-events-none" />
 
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 p-2.5 rounded-full bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 hover:rotate-90 transition-all duration-300 z-10 border border-white/10"
-            title="Close"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          {!isMandatory && (
+            <button
+              onClick={onClose}
+              className="absolute top-4 right-4 p-2.5 rounded-full bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 hover:rotate-90 transition-all duration-300 z-10 border border-white/10"
+              title="Close"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+
+          {isMandatory && (
+            <div className="mb-4 p-3 rounded-xl bg-purple-500/15 border border-purple-500/30 text-purple-300 text-xs font-semibold flex items-center gap-2 text-center shadow-inner">
+              <ShieldCheck className="h-4 w-4 text-purple-400 shrink-0 mx-auto" />
+              <span>Mandatory Verification: Sign in or create your profile first to access the live student radar & network.</span>
+            </div>
+          )}
 
           <div className="text-center mt-1 relative z-10">
             <div className="h-14 w-14 rounded-2xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-600 p-[1.5px] shadow-lg shadow-purple-500/30 mx-auto mb-3 flex items-center justify-center">

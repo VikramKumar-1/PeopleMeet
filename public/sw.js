@@ -40,8 +40,16 @@ self.addEventListener('notificationclick', (event) => {
 
 async function syncUserLocationToSupabase() {
   try {
-    // In production, this pings Supabase Edge Function to update PostGIS proximity
     console.log('[Background SW] Syncing user live coordinates while app is closed/minimized...');
+    if ('geolocation' in self.navigator) {
+      self.navigator.geolocation.getCurrentPosition(async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        console.log('[Background SW] Captured live background coordinates:', lat, lng);
+      }, (err) => {
+        console.warn('[Background SW] Could not get background GPS:', err);
+      }, { enableHighAccuracy: true, timeout: 5000 });
+    }
   } catch (err) {
     console.error('[Background SW] Sync failed:', err);
   }

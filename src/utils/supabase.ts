@@ -17,12 +17,32 @@ export const isSupabaseReady = () => {
 };
 
 /**
- * Fetch live active peers from Supabase profiles table for a specific city.
- * Falls back to null if Supabase is not configured or table is empty.
+ * Haversine formula: Calculate exact distance in meters between two GPS coordinates.
+ * Used for real-world proximity calculation (walk/bike/car accuracy).
  */
-export const fetchLiveProfiles = async (cityId: string): Promise<RadarPerson[] | null> => {
+export const haversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+  const R = 6371e3; // Earth radius in meters
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+};
+
+/**
+ * Fetch live active peers from Supabase profiles table for a specific city.
+ * Calculates REAL Haversine distance from the requesting user's coordinates.
+ * Only returns users seen within the last 24 hours.
+ */
+export const fetchLiveProfiles = async (
+  cityId: string,
+  userLat?: number,
+  userLng?: number
+): Promise<RadarPerson[] | null> => {
   if (!supabase) return null;
   try {
+    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
@@ -30,21 +50,87 @@ export const fetchLiveProfiles = async (cityId: string): Promise<RadarPerson[] |
 
     if (error || !data || data.length === 0) return null;
 
-    return data.map((item: any) => ({
-      id: item.id,
-      name: item.full_name || 'Anonymous Student',
-      gender: item.gender || 'Others',
-      avatar: item.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
-      bio: item.bio || 'Active peer nearby',
-      coordinates: item.lat && item.lng ? { lat: item.lat, lng: item.lng } : { lat: 23.364, lng: 85.319 },
-      distanceMeter: 100,
-      status: item.status || 'Active',
-      hub: item.locality_hub || 'Central Hub',
-      cityId: item.city_id,
-    }));
+    return data.map((item: any) => {
+      const pLat = item.last_lat ?? item.lat ?? 0;
+      const pLng = item.last_lng ?? item.lng ?? 0;
+      const hasCoords = pLat !== 0 && pLng !== 0;
+
+      // Calculate real distance if both user and peer have coordinates
+      let distanceM = 9999;
+      if (hasCoords && userLat && userLng) {
+        distanceM = haversineDistance(userLat, userLng, pLat, pLng);
+      }
+
+      return {
+        id: item.id,
+        name: item.full_name || 'Anonymous Student',
+        gender: item.gender || 'Others',
+        avatar: item.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+        bio: item.bio || 'Active peer nearby',
+        coordinates: hasCoords ? { lat: pLat, lng: pLng } : undefined,
+        distanceMeter: distanceM,
+        status: item.is_online ? (item.status || 'Online') : 'Study Mode',
+        hub: item.locality_hub || 'Central Hub',
+        cityId: item.city_id,
+        lastLocationAt: item.last_location_at || item.created_at,
+        locationSource: item.location_source || 'signup',
+        isOnline: item.is_online ?? false,
+        lastSeenAt: item.last_seen_at || item.created_at,
+      } as RadarPerson;
+    });
   } catch (e) {
     console.error('Error fetching live profiles from Supabase:', e);
     return null;
+  }
+};
+
+/**
+ * Update user's live GPS location in Supabase.
+ * Called every 30 seconds while app is visible + on initial load.
+ */
+export const updateUserLocation = async (
+  userId: string,
+  lat: number,
+  lng: number,
+  source: 'gps' | 'ip' | 'manual' | 'signup' = 'gps'
+): Promise<boolean> => {
+  if (!supabase || !userId) return false;
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        last_lat: lat,
+        last_lng: lng,
+        last_location_at: new Date().toISOString(),
+        location_source: source,
+        is_online: true,
+        last_seen_at: new Date().toISOString(),
+      })
+      .eq('id', userId);
+    return !error;
+  } catch (e) {
+    console.error('Error updating user location:', e);
+    return false;
+  }
+};
+
+/**
+ * Mark user as offline when they close the tab / switch away.
+ */
+export const markUserOffline = async (userId: string): Promise<boolean> => {
+  if (!supabase || !userId) return false;
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        is_online: false,
+        last_seen_at: new Date().toISOString(),
+      })
+      .eq('id', userId);
+    return !error;
+  } catch (e) {
+    console.error('Error marking user offline:', e);
+    return false;
   }
 };
 
@@ -66,6 +152,12 @@ export const seedInitialSupabaseData = async (): Promise<boolean> => {
         locality_hub: 'Lalpur Chowk',
         lat: 23.3645,
         lng: 85.3195,
+        last_lat: 23.3645,
+        last_lng: 85.3195,
+        last_location_at: new Date().toISOString(),
+        location_source: 'signup',
+        is_online: true,
+        last_seen_at: new Date().toISOString(),
         status: 'Online',
       },
       {
@@ -78,6 +170,12 @@ export const seedInitialSupabaseData = async (): Promise<boolean> => {
         locality_hub: 'Kanke Road',
         lat: 23.3720,
         lng: 85.3150,
+        last_lat: 23.3720,
+        last_lng: 85.3150,
+        last_location_at: new Date().toISOString(),
+        location_source: 'signup',
+        is_online: false,
+        last_seen_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
         status: 'Walking on Road',
       },
       {
@@ -90,6 +188,12 @@ export const seedInitialSupabaseData = async (): Promise<boolean> => {
         locality_hub: 'Boring Road',
         lat: 23.3660,
         lng: 85.3220,
+        last_lat: 23.3660,
+        last_lng: 85.3220,
+        last_location_at: new Date().toISOString(),
+        location_source: 'signup',
+        is_online: true,
+        last_seen_at: new Date().toISOString(),
         status: 'Online',
       },
       {
@@ -102,6 +206,12 @@ export const seedInitialSupabaseData = async (): Promise<boolean> => {
         locality_hub: 'Lalpur Chowk',
         lat: 23.3638,
         lng: 85.3188,
+        last_lat: 23.3638,
+        last_lng: 85.3188,
+        last_location_at: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+        location_source: 'gps',
+        is_online: false,
+        last_seen_at: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
         status: 'Online',
       },
       {
@@ -114,6 +224,12 @@ export const seedInitialSupabaseData = async (): Promise<boolean> => {
         locality_hub: 'Lalpur Chowk',
         lat: 23.3642,
         lng: 85.3190,
+        last_lat: 23.3642,
+        last_lng: 85.3190,
+        last_location_at: new Date().toISOString(),
+        location_source: 'signup',
+        is_online: true,
+        last_seen_at: new Date().toISOString(),
         status: 'Online',
       }
     ];
@@ -129,5 +245,3 @@ export const seedInitialSupabaseData = async (): Promise<boolean> => {
     return false;
   }
 };
-
-

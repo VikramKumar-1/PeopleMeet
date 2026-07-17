@@ -11,7 +11,8 @@ import StayView from '@/components/views/StayView';
 import TiffinView from '@/components/views/TiffinView';
 import AccountView from '@/components/views/AccountView';
 import { CITIES, RADAR_PEOPLE, PG_LISTINGS, FLAT_LISTINGS, TIFFIN_LISTINGS } from '@/data/mockData';
-import { isSupabaseReady, fetchLiveProfiles, seedInitialSupabaseData, supabase } from '@/utils/supabase';
+import AuthModal from '@/components/AuthModal';
+import { isSupabaseReady, fetchLiveProfiles, seedInitialSupabaseData, supabase, updateUserLocation, markUserOffline } from '@/utils/supabase';
 import { CityHub, RadarPerson, ChatMessage } from '@/types';
 import { CheckCircle2, X, MapPin } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -33,6 +34,8 @@ export default function Home() {
   const [friendRequestsSent, setFriendRequestsSent] = useState<string[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [myProfileId, setMyProfileId] = useState<string | null>(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -51,6 +54,9 @@ export default function Home() {
             const p = JSON.parse(savedProfile);
             if (p.id) setMyProfileId(p.id);
           } catch (e) {}
+        } else {
+          // If user has not logged in or registered yet, force open AuthModal mandatory onboarding!
+          setIsAuthModalOpen(true);
         }
       };
       checkSavedData();
@@ -185,7 +191,7 @@ export default function Home() {
       if (!isSupabaseReady()) return;
       setIsLiveDatabaseActive(true);
       const targetCityId = currentCity ? currentCity.id : 'ranchi';
-      const fetched = await fetchLiveProfiles(targetCityId);
+      const fetched = await fetchLiveProfiles(targetCityId, userCoords?.lat, userCoords?.lng);
       
       if (fetched && fetched.length > 0) {
         setLivePeopleList(fetched);
@@ -193,7 +199,7 @@ export default function Home() {
         // If the Supabase table is completely empty (0 rows), auto-seed our initial real records directly into cloud DB!
         const seeded = await seedInitialSupabaseData();
         if (seeded) {
-          const reFetched = await fetchLiveProfiles(targetCityId);
+          const reFetched = await fetchLiveProfiles(targetCityId, userCoords?.lat, userCoords?.lng);
           if (reFetched && reFetched.length > 0) {
             setLivePeopleList(reFetched);
           }
@@ -202,7 +208,7 @@ export default function Home() {
     };
     syncRealProfiles();
 
-    // Subscribe to live instant updates (WebSockets)
+    // Subscribe to live instant updates (WebSockets) — when BOTH users have app open, they see each other in real-time
     if (supabase) {
       const channel = supabase
         .channel('public:profiles')
@@ -212,7 +218,86 @@ export default function Home() {
         .subscribe();
       return () => { supabase?.removeChannel(channel); };
     }
-  }, [currentCity]);
+  }, [currentCity, userCoords]);
+
+  // Production Lifecycle: Continuous GPS tracking + Online/Offline sync (30s heartbeat)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // Load saved coords immediately
+    try {
+      const saved = localStorage.getItem('stay_dine_last_coords');
+      if (saved) {
+        const c = JSON.parse(saved);
+        if (c.lat && c.lng) setUserCoords(c);
+      }
+    } catch (e) {}
+
+    // Start continuous GPS tracking
+    let watchId: number | null = null;
+    if ('geolocation' in navigator) {
+      watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          setUserCoords(coords);
+          localStorage.setItem('stay_dine_last_coords', JSON.stringify(coords));
+        },
+        () => {},
+        { enableHighAccuracy: true, maximumAge: 5000 }
+      );
+    }
+
+    // 30-second heartbeat: update location in Supabase + mark online
+    const heartbeat = setInterval(() => {
+      if (!myProfileId) return;
+      try {
+        const saved = localStorage.getItem('stay_dine_last_coords');
+        if (saved) {
+          const c = JSON.parse(saved);
+          if (c.lat && c.lng) updateUserLocation(myProfileId, c.lat, c.lng, 'gps');
+        }
+      } catch (e) {}
+    }, 30000);
+
+    // Initial sync on mount
+    if (myProfileId) {
+      try {
+        const saved = localStorage.getItem('stay_dine_last_coords');
+        if (saved) {
+          const c = JSON.parse(saved);
+          if (c.lat && c.lng) updateUserLocation(myProfileId, c.lat, c.lng, 'gps');
+        }
+      } catch (e) {}
+    }
+
+    // Visibility change: mark offline when user switches tab, online when they come back
+    const handleVisibility = () => {
+      if (!myProfileId) return;
+      if (document.hidden) {
+        markUserOffline(myProfileId);
+      } else {
+        try {
+          const saved = localStorage.getItem('stay_dine_last_coords');
+          if (saved) {
+            const c = JSON.parse(saved);
+            if (c.lat && c.lng) updateUserLocation(myProfileId, c.lat, c.lng, 'gps');
+          }
+        } catch (e) {}
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    // Before unload: mark offline
+    const handleUnload = () => { if (myProfileId) markUserOffline(myProfileId); };
+    window.addEventListener('beforeunload', handleUnload);
+
+    return () => {
+      clearInterval(heartbeat);
+      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('beforeunload', handleUnload);
+    };
+  }, [myProfileId]);
 
   const handleOpenChatWithPerson = (person: RadarPerson) => {
     setActiveChatPerson(person);
@@ -229,9 +314,13 @@ export default function Home() {
     if (activeChatPerson) {
       setTimeout(() => {
         setMessages((prev) => {
+          // Check if peer already has messages to prevent annoying auto-message spam during real conversations
+          const existingReplies = prev.filter((m) => m.senderId === activeChatPerson.id);
+          if (existingReplies.length >= 1) return prev; // Don't interrupt if conversation has already begun!
+
           const reply: ChatMessage = {
             id: `r-${Date.now()}`, senderId: activeChatPerson.id, receiverId: 'me',
-            text: `Got it! Let's meet near ${currentCity ? currentCity.defaultHub : 'Lalpur'} tonight.`, timestamp: 'Just now', isRead: false,
+            text: `Hey! Thanks for connecting. I am around ${currentCity ? currentCity.defaultHub : 'Lalpur'} right now. Where are you?`, timestamp: 'Just now', isRead: false,
           };
           const updated = [...prev, reply];
           if (typeof window !== 'undefined') localStorage.setItem('stay_dine_messages', JSON.stringify(updated));
@@ -404,6 +493,18 @@ export default function Home() {
             currentCity={currentCity} onSuccessListing={(t, c) => showToast(`"${t}" is now live as ${c}!`)} />
         </>
       )}
+
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onProfileCreated={(profile) => {
+          setMyProfileId(profile.id);
+          setIsAuthModalOpen(false);
+          showToast('Welcome to PeopleMeet! Your profile is active on Radar 🚀');
+        }}
+        isMandatory={!myProfileId && typeof window !== 'undefined' && !localStorage.getItem('stay_dine_user_profile')}
+        currentCity={currentCity}
+      />
 
       <ChatDrawer isOpen={isChatDrawerOpen} onClose={() => setIsChatDrawerOpen(false)}
         activeChatPerson={activeChatPerson} messages={messages}

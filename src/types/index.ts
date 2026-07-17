@@ -12,6 +12,8 @@ export interface CityHub {
 
 export type GenderType = 'All' | 'Boys' | 'Girls' | 'Others';
 
+export type LocationSource = 'gps' | 'ip' | 'manual' | 'signup';
+
 export interface RadarPerson {
   id: string;
   name: string;
@@ -19,11 +21,16 @@ export interface RadarPerson {
   avatar: string;
   bio: string;
   coordinates?: { lat: number; lng: number }; // Exact GPS location inside city
-  distanceMeter: number; // Dynamically calculated from user's active coordinate
+  distanceMeter: number; // Dynamically calculated via Haversine from user's live coordinate
   status: 'Online' | 'Study Mode' | 'Looking for PG' | 'Walking on Road';
   hub: string;
   cityId: CityId;
   isFriend?: boolean;
+  // Production location tracking fields
+  lastLocationAt?: string; // ISO timestamp of when location was last updated
+  locationSource?: LocationSource; // How location was captured
+  isOnline?: boolean; // Currently has app open
+  lastSeenAt?: string; // ISO timestamp of last activity
 }
 
 export type PgType = 'Only Boys' | 'Only Girls' | 'Co-ed';

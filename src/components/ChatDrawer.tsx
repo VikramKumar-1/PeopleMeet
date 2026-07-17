@@ -110,28 +110,30 @@ export default function ChatDrawer({
                     ⚡ Supabase Realtime active. Messages are peer-to-peer instant.
                   </div>
 
-                  {messages.map((msg) => {
-                    const isMe = msg.senderId === 'me';
-                    return (
-                      <div
-                        key={msg.id}
-                        className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
-                      >
+                  {messages
+                    .filter((msg) => msg.senderId === activeChatPerson.id || msg.receiverId === activeChatPerson.id || msg.receiverId === 'general')
+                    .map((msg) => {
+                      const isMe = msg.senderId === 'me';
+                      return (
                         <div
-                          className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-sm shadow-md ${
-                            isMe
-                              ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-br-none'
-                              : 'bg-slate-800 text-slate-200 border border-slate-700/80 rounded-bl-none'
-                          }`}
+                          key={msg.id}
+                          className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
                         >
-                          {msg.text}
+                          <div
+                            className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-sm shadow-md ${
+                              isMe
+                                ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-br-none'
+                                : 'bg-slate-800 text-slate-200 border border-slate-700/80 rounded-bl-none'
+                            }`}
+                          >
+                            {msg.text}
+                          </div>
+                          <span className="text-[10px] text-slate-500 mt-1 px-1">
+                            {msg.timestamp}
+                          </span>
                         </div>
-                        <span className="text-[10px] text-slate-500 mt-1 px-1">
-                          {msg.timestamp}
-                        </span>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
                 </div>
 
                 {/* Input Bar */}
