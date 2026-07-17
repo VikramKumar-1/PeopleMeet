@@ -432,50 +432,6 @@ export default function RadarView({
 
   return (
     <div className="space-y-5 pb-28 md:pb-8">
-      {/* 1. Broadcast Bar & 200+ Simulation Trigger */}
-      <div className="card p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-[var(--border-subtle)]">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="relative shrink-0">
-            <span className={`flex h-3 w-3 rounded-full ${isBroadcasting ? 'bg-[var(--accent-green)]' : 'bg-[var(--accent-amber)]'}`} />
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-bold text-[var(--text-primary)] truncate flex items-center gap-2">
-              <span>{isBroadcasting ? 'Proximity broadcast is ON' : 'Ghost mode — you are hidden'}</span>
-            </p>
-            <p className="text-xs text-[var(--text-tertiary)] truncate">
-              {isBroadcasting ? `Discovering ${filteredPeople.length} peers within ${selectedRadius}m` : 'Your location is hidden'}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
-          <button
-            onClick={handleEnableRealGps}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all flex items-center gap-1.5 shadow-sm border ${
-              gpsStatus === 'active'
-                ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/40'
-                : gpsStatus === 'denied'
-                ? 'bg-amber-500/15 text-amber-500 border-amber-500/40'
-                : 'bg-blue-500/15 text-blue-500 border-blue-500/40 hover:bg-blue-500/25'
-            }`}
-            title="Connect your browser GPS for high-accuracy live proximity tracking"
-          >
-            <MapPin className="h-3.5 w-3.5" />
-            {gpsStatus === 'active' ? '🎯 GPS Live (±6m)' : gpsStatus === 'locating' ? '⏳ Locating...' : gpsStatus === 'denied' ? '📍 GPS Off · Hub Mode' : '🎯 Connect Real GPS'}
-          </button>
-
-          <button
-            onClick={() => setIsBroadcasting(!isBroadcasting)}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-colors ${
-              isBroadcasting
-                ? 'bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:opacity-80 border border-[var(--border-subtle)]'
-                : 'bg-[var(--accent-green)]/15 text-[var(--accent-green)] hover:bg-[var(--accent-green)]/25'
-            }`}
-          >
-            {isBroadcasting ? 'Go Ghost' : 'Go Live'}
-          </button>
-        </div>
-      </div>
 
       {people.length === 0 && (
         <div className="card p-5 text-center bg-[var(--bg-elevated)] border border-[var(--border-subtle)] shadow-xl max-w-md mx-auto my-4 space-y-3 animate-fade-in">
@@ -505,27 +461,6 @@ export default function RadarView({
         </div>
       )}
 
-      {/* Real Geolocation API & Hub Fallback Engine Status Banner */}
-      {gpsStatus === 'active' && userCoords && (
-        <div className="card p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 text-xs flex items-center justify-between gap-2 shadow-sm animate-fade-in">
-          <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" />
-            <span><strong>High Accuracy GPS Active:</strong> Lat {userCoords.lat.toFixed(4)}, Lng {userCoords.lng.toFixed(4)} · Proximity check active across {currentCity.name.split(' (')[0]}.</span>
-          </div>
-          <button onClick={() => setGpsStatus('idle')} className="text-emerald-500 font-bold hover:underline">Reset</button>
-        </div>
-      )}
-      {gpsStatus === 'denied' && (
-        <div className="card p-3.5 bg-amber-500/10 border border-amber-500/30 text-amber-500 text-xs space-y-1 shadow-sm animate-fade-in">
-          <div className="flex items-center justify-between font-bold">
-            <span>🛡️ Live GPS is OFF · Showing Locality Network (`{currentCity.defaultHub}`)</span>
-            <button onClick={() => setGpsStatus('idle')} className="underline">Turn ON GPS</button>
-          </div>
-          <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
-            Because exact GPS is turned off (`or Go Ghost is on`), we never track your exact room pin. Instead, you are safely exploring peers and PGs across your primary locality (`{currentCity.defaultHub}`)!
-          </p>
-        </div>
-      )}
 
       {/* 2. Radar Card ("radar upper rahega") */}
       <div className="card overflow-hidden">
@@ -534,7 +469,20 @@ export default function RadarView({
             <div className="flex items-center gap-2">
               <h2 className="text-base font-bold text-[var(--text-primary)]">People Nearby</h2>
             </div>
-            <span className="badge badge-blue font-bold">{filteredPeople.length} online</span>
+            <div className="flex items-center gap-2">
+              <span className="badge badge-blue font-bold">{filteredPeople.length} online</span>
+              <button
+                onClick={() => setIsBroadcasting(!isBroadcasting)}
+                className={`px-3 py-1 text-[10px] sm:text-xs font-bold rounded-lg transition-colors border shadow-sm ${
+                  isBroadcasting
+                    ? 'bg-[var(--bg-elevated)] text-[var(--text-secondary)] border-[var(--border-subtle)] hover:bg-[var(--bg-card)]'
+                    : 'bg-indigo-500/15 text-indigo-500 border-indigo-500/30 hover:bg-indigo-500/25'
+                }`}
+                title={isBroadcasting ? 'Hide yourself from radar' : 'Make yourself visible on radar'}
+              >
+                {isBroadcasting ? '👻 Go Ghost' : '⚡ Go Live'}
+              </button>
+            </div>
           </div>
 
           {effectiveRadius > selectedRadius && (
@@ -576,8 +524,8 @@ export default function RadarView({
         </div>
 
         {/* 360 Radar Circle ("in desktop bada karo radar ko halka") */}
-        <div className="relative w-full aspect-square max-w-[340px] md:max-w-[440px] mx-auto my-8 flex items-center justify-center overflow-visible">
-          <div className="relative w-[86%] h-[86%] rounded-full border border-[var(--border-subtle)] flex items-center justify-center bg-[var(--bg-elevated)]/30 overflow-hidden shadow-inner">
+        <div className="relative w-full aspect-square max-w-[340px] md:max-w-[440px] mx-auto my-6 flex items-center justify-center overflow-visible">
+          <div className="relative w-full h-full rounded-full border border-[var(--border-subtle)] flex items-center justify-center bg-[var(--bg-elevated)]/30 shadow-inner">
             <div className="absolute inset-0 rounded-full border border-[var(--border-subtle)]" />
             <div className="absolute inset-[26%] rounded-full border border-[var(--border-subtle)]" />
             <div className="absolute inset-[52%] rounded-full border border-[var(--border-subtle)]" />
@@ -906,8 +854,10 @@ export default function RadarView({
                         <p className="text-sm font-extrabold text-[var(--text-primary)] truncate">{p.name}</p>
                         <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--bg-elevated)] font-bold text-[var(--text-secondary)]">{p.gender}</span>
                       </div>
-                      <p className="text-xs font-semibold text-[var(--accent)] truncate mt-0.5">
-                        📍 {distLabel} · {p.hub}
+                      <p className="text-xs font-semibold text-[var(--accent)] truncate mt-0.5 flex items-center gap-1.5">
+                        <span>📍 {distLabel}</span>
+                        <span className="text-[10px] text-[var(--text-tertiary)] opacity-60">•</span>
+                        <span className={isLive ? 'text-emerald-500' : isRecent ? 'text-amber-500' : 'text-[var(--text-tertiary)]'}>{activeLabel}</span>
                       </p>
                       <p className="text-xs text-[var(--text-tertiary)] truncate mt-0.5">{p.bio}</p>
                     </div>
