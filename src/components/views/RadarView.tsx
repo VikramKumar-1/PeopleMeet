@@ -824,19 +824,9 @@ export default function RadarView({
                     <span className="badge badge-purple text-xs">Filter: {selectedHubFilter} ✕</span>
                   )}
                 </h3>
-                <p className="text-xs text-[var(--text-tertiary)] mt-0.5">Explore all people currently active within {selectedRadius}m</p>
               </div>
 
-              <div className="flex w-full sm:w-auto items-center gap-2">
-                <div className="relative flex-1 sm:w-56">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-tertiary)]" />
-                  <input
-                    type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search name, hub..."
-                    className="w-full bg-[var(--bg-elevated)] border border-[var(--border-subtle)] rounded-xl pl-9 pr-3 py-1.5 text-xs text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:outline-none focus:border-[var(--accent)]"
-                  />
-                </div>
-
+              <div className="flex w-full sm:w-auto items-center justify-end gap-2">
                 <button
                   onClick={() => setShowAllPeopleList(false)}
                   className="px-3 py-1.5 rounded-xl bg-[var(--bg-elevated)] text-[var(--text-secondary)] border border-[var(--border-subtle)] text-xs font-bold hover:opacity-80 transition-colors shrink-0 flex items-center gap-1"

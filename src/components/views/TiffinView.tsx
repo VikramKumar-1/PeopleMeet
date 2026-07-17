@@ -125,7 +125,7 @@ function TiffinCard({ item }: { item: any }) {
     <div className="card overflow-hidden">
       {/* Image */}
       <div className="relative h-44 sm:h-52 bg-[var(--bg-elevated)]">
-        <img src={item.image} alt={item.title} className="w-full h-full object-cover" loading="lazy" />
+        <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
         {item.isPrime && (
           <span className="absolute top-3 left-3 badge badge-prime"><Star className="h-3 w-3" /> Featured</span>
