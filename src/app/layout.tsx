@@ -49,7 +49,7 @@ export default function RootLayout({
       className={`${outfit.variable} ${outfit.className} ${geistSans.variable} ${geistMono.variable} antialiased dark`}
       suppressHydrationWarning
     >
-      <body className={`min-h-screen ${outfit.className}`}>
+      <body className={`min-h-[100dvh] overscroll-none overflow-x-hidden w-full ${outfit.className}`}>
         {children}
       </body>
     </html>

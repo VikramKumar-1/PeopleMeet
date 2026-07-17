@@ -28,6 +28,7 @@ export default function ChatDrawer({
 }: ChatDrawerProps) {
   const [inputText, setInputText] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -44,6 +45,10 @@ export default function ChatDrawer({
     if (!inputText.trim()) return;
     onSendMessage(inputText.trim());
     setInputText('');
+    
+    // Keep keyboard open for rapid firing
+    inputRef.current?.focus();
+    
     setTimeout(scrollToBottom, 50); // Ensure scroll happens after DOM update
   };
 
@@ -173,6 +178,7 @@ export default function ChatDrawer({
                   className="p-2.5 pb-5 sm:pb-2.5 bg-[#202c33] border-t border-[#2a3942] flex items-center gap-2"
                 >
                   <input
+                    ref={inputRef}
                     type="text"
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}

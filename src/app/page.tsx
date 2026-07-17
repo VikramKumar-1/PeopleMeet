@@ -439,7 +439,7 @@ export default function Home() {
   }, [currentCity, livePeopleList, myProfileId, userCoords]);
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-[100dvh] flex flex-col">
       <SplashScreen />
       <Navbar
         currentCity={currentCity}

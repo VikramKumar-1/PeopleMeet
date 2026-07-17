@@ -362,14 +362,6 @@ export default function RadarView({
   // Render Suggested Friend Requests component block
   const renderSuggestedSection = () => (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-base font-bold text-[var(--text-primary)]">
-            Suggested people near you
-          </h3>
-        </div>
-      </div>
-
       <div className="flex overflow-x-auto pb-3 pt-1 gap-3.5 no-scrollbar scroll-smooth snap-x snap-mandatory">
         {suggestions.map((peer) => {
           // Freshness badge logic (production-level)
@@ -792,60 +784,64 @@ export default function RadarView({
       <div id="suggested-section-anchor" className="pt-4" />
 
       {/* Main List Section */}
-      <div id="people-nearby-list" className="space-y-3">
-        <div className={`space-y-2 ${showAllPeopleList ? 'max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar' : ''}`}>
-          {(showAllPeopleList ? filteredPeople : filteredPeople.slice(0, 6)).map((p) => {
-            const lastSeen = p.lastSeenAt ? new Date(p.lastSeenAt) : null;
-            const minsAgo = lastSeen ? Math.floor((Date.now() - lastSeen.getTime()) / 60000) : 999;
-            const isLive = p.isOnline || minsAgo < 5;
-            const isRecent = !isLive && minsAgo < 120;
-            const activeLabel = isLive ? '🟢 Live now' : isRecent ? `🟡 Active ${minsAgo}m ago` : minsAgo < 1440 ? `Seen ${Math.floor(minsAgo / 60)}h ago` : 'Seen today';
-            const distLabel = p.distanceMeter < 1000 ? `${p.distanceMeter}m away` : `${(p.distanceMeter / 1000).toFixed(1)}km away`;
+      {!showAllPeopleList ? (
+        renderSuggestedSection()
+      ) : (
+        <div id="people-nearby-list" className="space-y-3">
+          <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+            {filteredPeople.map((p) => {
+              const lastSeen = p.lastSeenAt ? new Date(p.lastSeenAt) : null;
+              const minsAgo = lastSeen ? Math.floor((Date.now() - lastSeen.getTime()) / 60000) : 999;
+              const isLive = p.isOnline || minsAgo < 5;
+              const isRecent = !isLive && minsAgo < 120;
+              const activeLabel = isLive ? '🟢 Live now' : isRecent ? `🟡 Active ${minsAgo}m ago` : minsAgo < 1440 ? `Seen ${Math.floor(minsAgo / 60)}h ago` : 'Seen today';
+              const distLabel = p.distanceMeter < 1000 ? `${p.distanceMeter}m away` : `${(p.distanceMeter / 1000).toFixed(1)}km away`;
 
-            return (
-              <div key={`list-${p.id}`} onClick={() => { setSelectedPerson(p); window.scrollTo({ top: 120, behavior: 'smooth' }); }}
-                className="card p-3.5 flex items-center gap-3 cursor-pointer hover:border-[var(--accent)] transition-all">
-                <div className="relative shrink-0">
-                  <Image width={48} height={48} src={p.avatar} alt={p.name} className="h-12 w-12 rounded-full object-cover border-2 border-[var(--border-subtle)]" />
-                  <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[var(--bg-card-solid)] ${isLive ? 'bg-emerald-500' : isRecent ? 'bg-amber-400' : 'bg-slate-400'}`} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-extrabold text-[var(--text-primary)] truncate">{p.name}</p>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--bg-elevated)] font-bold text-[var(--text-secondary)]">{p.gender}</span>
+              return (
+                <div key={`list-${p.id}`} onClick={() => { setSelectedPerson(p); window.scrollTo({ top: 120, behavior: 'smooth' }); }}
+                  className="card p-3.5 flex items-center gap-3 cursor-pointer hover:border-[var(--accent)] transition-all">
+                  <div className="relative shrink-0">
+                    <Image width={48} height={48} src={p.avatar} alt={p.name} className="h-12 w-12 rounded-full object-cover border-2 border-[var(--border-subtle)]" />
+                    <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[var(--bg-card-solid)] ${isLive ? 'bg-emerald-500' : isRecent ? 'bg-amber-400' : 'bg-slate-400'}`} />
                   </div>
-                  <p className="text-xs font-semibold text-[var(--accent)] truncate mt-0.5 flex items-center gap-1.5">
-                    <span>📍 {distLabel}</span>
-                    <span className="text-[10px] text-[var(--text-tertiary)] opacity-60">•</span>
-                    <span className={isLive ? 'text-emerald-500' : isRecent ? 'text-amber-500' : 'text-[var(--text-tertiary)]'}>{activeLabel}</span>
-                  </p>
-                  <p className="text-xs text-[var(--text-tertiary)] truncate mt-0.5">{p.bio}</p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-extrabold text-[var(--text-primary)] truncate">{p.name}</p>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--bg-elevated)] font-bold text-[var(--text-secondary)]">{p.gender}</span>
+                    </div>
+                    <p className="text-xs font-semibold text-[var(--accent)] truncate mt-0.5 flex items-center gap-1.5">
+                      <span>📍 {distLabel}</span>
+                      <span className="text-[10px] text-[var(--text-tertiary)] opacity-60">•</span>
+                      <span className={isLive ? 'text-emerald-500' : isRecent ? 'text-amber-500' : 'text-[var(--text-tertiary)]'}>{activeLabel}</span>
+                    </p>
+                    <p className="text-xs text-[var(--text-tertiary)] truncate mt-0.5">{p.bio}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-[10px] text-[var(--text-tertiary)] bg-[var(--bg-elevated)] px-2 py-1 rounded-md mt-0.5">{p.status}</p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />
                 </div>
-                <div className="text-right shrink-0">
-                  <p className="text-[10px] text-[var(--text-tertiary)] bg-[var(--bg-elevated)] px-2 py-1 rounded-md mt-0.5">{p.status}</p>
-                </div>
-                <ChevronRight className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
 
-        {/* See Less Button at the bottom when expanded */}
-        {showAllPeopleList && filteredPeople.length > 6 && (
-          <button
-            onClick={() => {
-              setShowAllPeopleList(false);
-              setTimeout(() => {
-                const el = document.getElementById('radar-banner');
-                if (el) el.scrollIntoView({ behavior: 'smooth' });
-              }, 50);
-            }}
-            className="w-full mt-4 text-xs font-extrabold text-[var(--text-primary)] flex items-center justify-center gap-2 bg-[var(--bg-elevated)] border border-[var(--border-subtle)] py-3 rounded-xl hover:bg-[var(--border-subtle)] transition-colors"
-          >
-            See Less <ChevronUp className="h-4 w-4" />
-          </button>
-        )}
-      </div>
+          {/* See Less Button at the bottom when expanded */}
+          {filteredPeople.length > 3 && (
+            <button
+              onClick={() => {
+                setShowAllPeopleList(false);
+                setTimeout(() => {
+                  const el = document.getElementById('radar-banner');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }, 50);
+              }}
+              className="w-full mt-4 text-xs font-extrabold text-[var(--text-primary)] flex items-center justify-center gap-2 bg-[var(--bg-elevated)] border border-[var(--border-subtle)] py-3 rounded-xl hover:bg-[var(--border-subtle)] transition-colors"
+            >
+              See Less <ChevronUp className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
