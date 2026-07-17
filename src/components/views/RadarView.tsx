@@ -73,8 +73,8 @@ export default function RadarView({
   // Toggle for testing 200+ Users
   const [isSimulating200Plus, setIsSimulating200Plus] = useState(false);
 
-  // State for toggling full grid view vs suggested view
-  const [showAllPeopleList, setShowAllPeopleList] = useState(false);
+  // State for toggling full grid view vs suggested view (Start TRUE so searchable grid is immediately visible and accessible!)
+  const [showAllPeopleList, setShowAllPeopleList] = useState(true);
 
   // Real Browser GPS Geolocation state (Production grade location tracking + fallback)
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(() => {
@@ -243,13 +243,17 @@ export default function RadarView({
   // All people matching filters (`using dynamic effectiveRadius`)
   const filteredPeople = useMemo(() => {
     return activePeopleList.filter((p) => {
+      // 1. If user typed a search term, prioritize finding any matching student across the city!
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchesQuery = p.name.toLowerCase().includes(q) || p.bio.toLowerCase().includes(q) || p.hub.toLowerCase().includes(q);
+        if (!matchesQuery) return false;
+        return true; // Found matching peer even if slightly outside current radius slider
+      }
+      // 2. Standard filter checks when not searching
       if (selectedGender !== 'All' && p.gender !== selectedGender) return false;
       if (p.distanceMeter > effectiveRadius) return false;
       if (selectedHubFilter !== 'All Localities' && selectedHubFilter !== 'All Hubs' && p.hub !== selectedHubFilter) return false;
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        return p.name.toLowerCase().includes(q) || p.bio.toLowerCase().includes(q) || p.hub.toLowerCase().includes(q);
-      }
       return true;
     });
   }, [activePeopleList, selectedGender, effectiveRadius, selectedHubFilter, searchQuery]);
@@ -335,10 +339,6 @@ export default function RadarView({
           </h3>
           <p className="text-xs text-[var(--text-tertiary)] mt-0.5">Updated daily · Nearest study partners</p>
         </div>
-        <button onClick={() => setShuffleSeed((s) => s + 1)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--bg-elevated)] text-[var(--text-secondary)] border border-[var(--border-subtle)] text-xs font-semibold hover:opacity-80 transition-colors">
-          <RefreshCw className="h-3.5 w-3.5" /> Refresh
-        </button>
       </div>
 
       <div className="flex overflow-x-auto pb-3 pt-1 gap-3.5 no-scrollbar scroll-smooth snap-x snap-mandatory">
@@ -356,34 +356,39 @@ export default function RadarView({
 
           return (
             <div key={peer.id} onClick={() => setSelectedPerson(peer)}
-              className="card p-3.5 w-[145px] sm:w-[155px] shrink-0 snap-start bg-[var(--bg-elevated)] border border-[var(--border-subtle)] rounded-2xl flex flex-col items-center text-center hover:border-[var(--accent)] transition-all cursor-pointer relative shadow-sm group">
+              className="card p-3.5 w-[138px] sm:w-[152px] shrink-0 snap-start bg-[var(--bg-elevated)]/95 backdrop-blur-md border border-[var(--border-subtle)] rounded-3xl flex flex-col items-center text-center hover:border-[var(--accent)] transition-all cursor-pointer relative shadow-sm group">
               
-              {/* Profile Pic with Live/Active Dot */}
+              {/* Instagram Story Gradient Ring + Profile Pic */}
               <div className="relative mt-1">
-                <img src={peer.avatar} alt={peer.name}
-                  className="h-16 w-16 rounded-full object-cover border-2 border-[var(--border-subtle)] shadow-sm group-hover:scale-105 transition-transform" />
+                <div className="p-0.5 rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-purple-600 shadow-md group-hover:scale-105 transition-transform">
+                  <img src={peer.avatar} alt={peer.name}
+                    className="h-16 w-16 rounded-full object-cover border-2 border-[var(--bg-card-solid)] block" />
+                </div>
                 <span className={`absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 border-[var(--bg-elevated)] ${freshnessColor}`} title={freshnessLabel} />
               </div>
 
-              {/* Name & Proximity */}
-              <h4 className="text-[13px] font-bold text-[var(--text-primary)] truncate w-full mt-2.5">{peer.name}</h4>
-              <p className="text-[11px] font-semibold text-[var(--accent)] truncate w-full mt-0.5">
-                📍 {distLabel}
+              {/* Name & Proximity & Active Time */}
+              <h4 className="text-[13px] font-extrabold text-[var(--text-primary)] truncate w-full mt-2.5">{peer.name}</h4>
+              <p className="text-[11px] font-bold text-[var(--accent)] truncate w-full mt-0.5 flex items-center justify-center gap-1">
+                <span>📍 {distLabel}</span>
               </p>
-              <p className="text-[10px] text-[var(--text-tertiary)] truncate w-full">
+              <p className={`text-[10px] font-extrabold truncate w-full ${isLive ? 'text-emerald-500' : isRecent ? 'text-amber-500' : 'text-slate-400'}`}>
+                ⏱️ {freshnessLabel}
+              </p>
+              <p className="text-[10px] font-medium text-[var(--text-tertiary)] truncate w-full mt-0.5">
                 {peer.hub || currentCity.defaultHub}
               </p>
 
-              {/* Action Icons Only (Add & Message) */}
-              <div className="flex items-center justify-center gap-2.5 mt-3 pt-2 border-t border-[var(--border-subtle)]/60 w-full">
+              {/* Action Icons Only (Add & Message) - Insta Style Buttons */}
+              <div className="flex items-center justify-center gap-2.5 mt-3 pt-2.5 border-t border-[var(--border-subtle)]/50 w-full">
                 <button
                   onClick={(e) => { e.stopPropagation(); onSendFriendRequest(peer.id); }}
                   disabled={friendRequestsSent.includes(peer.id)}
                   title={friendRequestsSent.includes(peer.id) ? "Added" : "Add Friend"}
-                  className={`h-9 w-9 rounded-full flex items-center justify-center transition-all ${
+                  className={`h-9 w-9 rounded-full flex items-center justify-center transition-all shadow-sm ${
                     friendRequestsSent.includes(peer.id)
-                      ? 'bg-[var(--accent-green)]/15 text-[var(--accent-green)]'
-                      : 'bg-[var(--accent-purple)]/15 text-[var(--accent-purple)] hover:bg-[var(--accent-purple)]/30 hover:scale-110 shadow-sm'
+                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                      : 'bg-gradient-to-tr from-purple-600 to-pink-500 text-white hover:scale-110 active:scale-95'
                   }`}>
                   {friendRequestsSent.includes(peer.id)
                     ? <Check className="h-4 w-4" />
@@ -394,7 +399,7 @@ export default function RadarView({
                 <button
                   onClick={(e) => { e.stopPropagation(); onOpenChatWithPerson(peer); }}
                   title="Send Message"
-                  className="h-9 w-9 rounded-full bg-[var(--accent)]/15 text-[var(--accent)] flex items-center justify-center hover:bg-[var(--accent)]/30 hover:scale-110 transition-all shadow-sm">
+                  className="h-9 w-9 rounded-full bg-gradient-to-tr from-blue-600 to-cyan-500 text-white flex items-center justify-center hover:scale-110 active:scale-95 transition-all shadow-sm">
                   <MessageCircle className="h-4 w-4" />
                 </button>
               </div>
@@ -617,7 +622,9 @@ export default function RadarView({
 
                     {isSelected && !isNearBottom ? (
                       <div className="px-2 py-1 rounded-xl bg-[var(--bg-card-solid)] border border-[var(--border-subtle)] shadow-2xl mt-1 flex items-center gap-1.5 animate-scale-in z-50">
-                        <span className="text-xs font-bold text-[var(--text-primary)] whitespace-nowrap">{p.name.split(' ')[0]}</span>
+                        <span className="text-xs font-bold text-[var(--text-primary)] whitespace-nowrap">
+                          {p.name.split(' ')[0]} <span className="text-[var(--accent)] font-extrabold">({p.distanceMeter < 1000 ? `${p.distanceMeter}m` : `${(p.distanceMeter/1000).toFixed(1)}km`})</span>
+                        </span>
                         <div className="flex items-center gap-1 border-l border-[var(--border-subtle)] pl-1.5">
                           <button onClick={(e) => { e.stopPropagation(); onOpenChatWithPerson(p); }} title="Message"
                             className="p-1 rounded-md bg-[var(--accent)]/15 text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white transition-colors">
@@ -631,8 +638,9 @@ export default function RadarView({
                         </div>
                       </div>
                     ) : !isSelected ? (
-                      <span className="text-[10px] font-bold text-[var(--text-secondary)] whitespace-nowrap mt-0.5 drop-shadow">
-                        {p.name.split(' ')[0]}
+                      <span className="text-[10px] font-extrabold text-[var(--text-secondary)] whitespace-nowrap mt-0.5 drop-shadow flex items-center gap-0.5">
+                        <span>{p.name.split(' ')[0]}</span>
+                        <span className="text-[var(--accent)] font-black">· {p.distanceMeter < 1000 ? `${p.distanceMeter}m` : `${(p.distanceMeter/1000).toFixed(1)}km`}</span>
                       </span>
                     ) : null}
                   </motion.div>
@@ -858,25 +866,41 @@ export default function RadarView({
             )}
 
             <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1 no-scrollbar">
-              {filteredPeople.slice(0, 50).map((p) => (
-                <div key={`list-${p.id}`} onClick={() => { setSelectedPerson(p); window.scrollTo({ top: 120, behavior: 'smooth' }); }}
-                  className="card p-3.5 flex items-center gap-3 cursor-pointer hover:border-[var(--accent)] transition-all">
-                  <img src={p.avatar} alt={p.name} className="h-11 w-11 rounded-xl object-cover border border-[var(--border-subtle)] shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-bold text-[var(--text-primary)] truncate">{p.name}</p>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--bg-elevated)] text-[var(--text-secondary)]">{p.gender}</span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--accent)]/10 text-[var(--accent)] font-semibold">{p.hub.split(' ')[0]}</span>
+              {filteredPeople.slice(0, 50).map((p) => {
+                const lastSeen = p.lastSeenAt ? new Date(p.lastSeenAt) : null;
+                const minsAgo = lastSeen ? Math.floor((Date.now() - lastSeen.getTime()) / 60000) : 999;
+                const isLive = p.isOnline || minsAgo < 5;
+                const isRecent = !isLive && minsAgo < 120;
+                const activeLabel = isLive ? '🟢 Live now' : isRecent ? `🟡 Active ${minsAgo}m ago` : minsAgo < 1440 ? `Seen ${Math.floor(minsAgo / 60)}h ago` : 'Seen today';
+                const distLabel = p.distanceMeter < 1000 ? `${p.distanceMeter}m away` : `${(p.distanceMeter / 1000).toFixed(1)}km away`;
+
+                return (
+                  <div key={`list-${p.id}`} onClick={() => { setSelectedPerson(p); window.scrollTo({ top: 120, behavior: 'smooth' }); }}
+                    className="card p-3.5 flex items-center gap-3 cursor-pointer hover:border-[var(--accent)] transition-all">
+                    <div className="relative shrink-0">
+                      <img src={p.avatar} alt={p.name} className="h-12 w-12 rounded-full object-cover border-2 border-[var(--border-subtle)]" />
+                      <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[var(--bg-card-solid)] ${isLive ? 'bg-emerald-500' : isRecent ? 'bg-amber-400' : 'bg-slate-400'}`} />
                     </div>
-                    <p className="text-xs text-[var(--text-tertiary)] truncate mt-0.5">{p.bio}</p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-extrabold text-[var(--text-primary)] truncate">{p.name}</p>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--bg-elevated)] font-bold text-[var(--text-secondary)]">{p.gender}</span>
+                      </div>
+                      <p className="text-xs font-semibold text-[var(--accent)] truncate mt-0.5">
+                        📍 {distLabel} · {p.hub}
+                      </p>
+                      <p className="text-xs text-[var(--text-tertiary)] truncate mt-0.5">{p.bio}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className={`text-xs font-bold flex items-center gap-1 justify-end ${isLive ? 'text-emerald-500' : isRecent ? 'text-amber-500' : 'text-slate-400'}`}>
+                        {activeLabel}
+                      </p>
+                      <p className="text-[10px] text-[var(--text-tertiary)] mt-0.5">{p.status}</p>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />
                   </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-xs font-bold text-[var(--accent)] flex items-center gap-1 justify-end">🟢 Active</p>
-                    <p className="text-[10px] text-[var(--text-tertiary)]">{p.status}</p>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />
-                </div>
-              ))}
+                );
+              })}
               {filteredPeople.length > 50 && (
                 <div className="p-4 text-center text-xs text-[var(--text-tertiary)] card">
                   Showing top 50 nearest students out of {filteredPeople.length}. Use search or radius filter above to narrow down.

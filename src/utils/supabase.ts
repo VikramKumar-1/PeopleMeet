@@ -245,3 +245,81 @@ export const seedInitialSupabaseData = async (): Promise<boolean> => {
     return false;
   }
 };
+
+/**
+ * Send a real-time peer-to-peer message across devices & tabs.
+ * Uses Supabase Realtime Broadcast + BroadcastChannel for instant transmission.
+ */
+export const sendRealtimeMessage = async (msg: any): Promise<void> => {
+  if (typeof window !== 'undefined') {
+    // 1. Send via local BroadcastChannel for multi-tab testing on the same browser
+    try {
+      const bc = new BroadcastChannel('stay_dine_campus_chat');
+      bc.postMessage(msg);
+      bc.close();
+    } catch (e) {}
+
+    // 2. Persist to global chat history in localStorage so new tabs can sync immediately
+    try {
+      const historyRaw = localStorage.getItem('stay_dine_global_chat_history') || '[]';
+      const history = JSON.parse(historyRaw);
+      history.push(msg);
+      // Keep last 150 messages
+      if (history.length > 150) history.splice(0, history.length - 150);
+      localStorage.setItem('stay_dine_global_chat_history', JSON.stringify(history));
+    } catch (e) {}
+  }
+
+  // 3. Broadcast across devices via Supabase WebSockets (`no db schema needed`)
+  if (supabase) {
+    try {
+      await supabase
+        .channel('campus_live_chat_channel')
+        .send({
+          type: 'broadcast',
+          event: 'NEW_CHAT_MESSAGE',
+          payload: msg,
+        });
+    } catch (e) {
+      console.warn('Supabase WebSocket broadcast warning:', e);
+    }
+  }
+};
+
+/**
+ * Subscribe to incoming peer-to-peer real-time messages.
+ */
+export const subscribeToRealtimeChat = (onReceiveMessage: (msg: any) => void): (() => void) => {
+  let bc: BroadcastChannel | null = null;
+  if (typeof window !== 'undefined') {
+    try {
+      bc = new BroadcastChannel('stay_dine_campus_chat');
+      bc.onmessage = (event) => {
+        if (event.data && event.data.id) {
+          onReceiveMessage(event.data);
+        }
+      };
+    } catch (e) {}
+  }
+
+  let supabaseSubscription: any = null;
+  if (supabase) {
+    try {
+      supabaseSubscription = supabase
+        .channel('campus_live_chat_channel')
+        .on('broadcast', { event: 'NEW_CHAT_MESSAGE' }, (payload: any) => {
+          if (payload && payload.payload && payload.payload.id) {
+            onReceiveMessage(payload.payload);
+          }
+        })
+        .subscribe();
+    } catch (e) {}
+  }
+
+  return () => {
+    if (bc) try { bc.close(); } catch (e) {}
+    if (supabaseSubscription && supabase) {
+      try { supabase.removeChannel(supabaseSubscription); } catch (e) {}
+    }
+  };
+};

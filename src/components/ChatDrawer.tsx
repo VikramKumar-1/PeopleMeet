@@ -13,6 +13,7 @@ interface ChatDrawerProps {
   onSendMessage: (text: string) => void;
   onSelectPerson: (person: RadarPerson) => void;
   peopleList: RadarPerson[];
+  myProfileId?: string | null;
 }
 
 export default function ChatDrawer({
@@ -23,6 +24,7 @@ export default function ChatDrawer({
   onSendMessage,
   onSelectPerson,
   peopleList,
+  myProfileId,
 }: ChatDrawerProps) {
   const [inputText, setInputText] = useState('');
 
@@ -46,26 +48,26 @@ export default function ChatDrawer({
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="w-screen max-w-md bg-slate-950 border-l border-slate-800 shadow-2xl flex flex-col h-full text-slate-100"
+            className="w-screen max-w-md bg-[#0b141a] border-l border-[#222d34] shadow-2xl flex flex-col h-full text-[#e9edef]"
           >
-            {/* Drawer Header */}
-            <div className="p-4 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
+            {/* Drawer Header (WhatsApp Style Top Bar) */}
+            <div className="p-3.5 bg-[#202c33] border-b border-[#2a3942] flex items-center justify-between shadow-sm">
               <div className="flex items-center gap-3">
-                <span className="p-2 rounded-xl bg-cyan-500/15 text-cyan-400 border border-cyan-500/30">
+                <span className="p-2 rounded-full bg-[#00a884]/20 text-[#00a884]">
                   <MessageSquare className="h-5 w-5" />
                 </span>
                 <div>
-                  <h3 className="font-bold text-base text-white">Direct Messages</h3>
-                  <p className="text-xs text-slate-400">
+                  <h3 className="font-bold text-base text-white">Campus Direct Chat</h3>
+                  <p className="text-xs text-[#8696a0]">
                     {activeChatPerson
-                      ? `Chatting with ${activeChatPerson.name}`
-                      : 'Select a student on Radar to chat'}
+                      ? `End-to-End Encrypted · ${activeChatPerson.name}`
+                      : 'WhatsApp-Style Instant Student Messaging'}
                   </p>
                 </div>
               </div>
               <button
                 onClick={onClose}
-                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                className="p-2 rounded-full hover:bg-[#374248] text-[#aebac1] transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -73,85 +75,102 @@ export default function ChatDrawer({
 
             {/* If a specific person is selected to chat */}
             {activeChatPerson ? (
-              <div className="flex-1 flex flex-col overflow-hidden bg-slate-950/50">
-                {/* Person Mini Banner */}
-                <div className="p-3 bg-slate-900/60 border-b border-slate-800/80 flex items-center justify-between">
+              <div className="flex-1 flex flex-col overflow-hidden bg-[#0b141a] relative">
+                {/* Person Mini Banner (WhatsApp Profile Bar) */}
+                <div className="p-3 bg-[#202c33] border-b border-[#2a3942] flex items-center justify-between shadow-md z-10">
                   <div className="flex items-center gap-3">
-                    <img
-                      src={activeChatPerson.avatar}
-                      alt={activeChatPerson.name}
-                      className="h-10 w-10 rounded-full object-cover border-2 border-cyan-500/40"
-                    />
+                    <div className="relative">
+                      <img
+                        src={activeChatPerson.avatar}
+                        alt={activeChatPerson.name}
+                        className="h-10 w-10 rounded-full object-cover border border-[#2a3942]"
+                      />
+                      <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-[#00a884] ring-2 ring-[#202c33]" />
+                    </div>
                     <div>
                       <div className="flex items-center gap-1.5">
-                        <h4 className="font-semibold text-sm text-white">
+                        <h4 className="font-bold text-sm text-white">
                           {activeChatPerson.name}
                         </h4>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-medium">
-                          {activeChatPerson.distanceMeter}m away
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#005c4b] text-[#e9edef] font-semibold">
+                          📍 {activeChatPerson.distanceMeter < 1000 ? `${activeChatPerson.distanceMeter}m` : `${(activeChatPerson.distanceMeter/1000).toFixed(1)}km`}
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-400 truncate max-w-[200px]">
-                        {activeChatPerson.bio}
+                      <p className="text-[11px] text-[#8696a0] truncate max-w-[200px]">
+                        🟢 online · {activeChatPerson.hub}
                       </p>
                     </div>
                   </div>
                   <button
                     onClick={() => onSelectPerson(null as any)}
-                    className="text-xs text-cyan-400 hover:underline font-medium px-2 py-1"
+                    className="text-xs text-[#00a884] hover:underline font-bold px-2 py-1"
                   >
-                    All Chats
+                    ← All Chats
                   </button>
                 </div>
 
-                {/* Messages Body */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                  <div className="text-center py-2 text-[11px] text-slate-500 bg-slate-900/40 rounded-xl border border-slate-800/60 mx-4">
-                    ⚡ Supabase Realtime active. Messages are peer-to-peer instant.
+                {/* Messages Body (WhatsApp Chat Background with Indian Telegram Campus Doodle Pattern on Mobile & Desktop) */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-3 telegram-chat-pattern">
+                  <div className="text-center py-1.5 px-3 text-[10.5px] font-medium text-[#8696a0] bg-[#182229]/90 backdrop-blur-sm rounded-lg border border-[#222d34] mx-auto max-w-xs shadow-sm">
+                    🔒 Messages are peer-to-peer instant across your active campus radius.
                   </div>
 
                   {messages
-                    .filter((msg) => msg.senderId === activeChatPerson.id || msg.receiverId === activeChatPerson.id || msg.receiverId === 'general')
+                    .filter((msg) => 
+                      msg.senderId === activeChatPerson.id || 
+                      msg.receiverId === activeChatPerson.id || 
+                      msg.receiverId === 'general' ||
+                      (myProfileId && (msg.senderId === myProfileId || msg.receiverId === myProfileId))
+                    )
                     .map((msg) => {
-                      const isMe = msg.senderId === 'me';
+                      const isMe = msg.senderId === 'me' || (myProfileId && msg.senderId === myProfileId);
                       return (
                         <div
                           key={msg.id}
-                          className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
+                          className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} animate-fade-in`}
                         >
+                          {/* WhatsApp Style Message Bubble */}
                           <div
-                            className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-sm shadow-md ${
+                            className={`max-w-[82%] sm:max-w-[75%] rounded-2xl px-3.5 py-2 text-[13.5px] leading-relaxed shadow-sm relative ${
                               isMe
-                                ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-br-none'
-                                : 'bg-slate-800 text-slate-200 border border-slate-700/80 rounded-bl-none'
+                                ? 'bg-[#005c4b] text-white rounded-tr-none border border-[#006d59]'
+                                : 'bg-[#202c33] text-[#e9edef] rounded-tl-none border border-[#2a3942]'
                             }`}
                           >
-                            {msg.text}
+                            {!isMe && (
+                              <p className="text-[11px] font-bold text-[#00a884] mb-0.5 tracking-tight truncate">
+                                {msg.senderName || activeChatPerson.name}
+                              </p>
+                            )}
+                            <p className="break-words">{msg.text}</p>
+                            <div className={`flex items-center justify-end gap-1 mt-1 text-[10px] ${isMe ? 'text-[#8696a0] sm:text-emerald-200/90' : 'text-[#8696a0]'}`}>
+                              <span>{msg.timestamp}</span>
+                              {isMe && (
+                                <span className="font-bold text-[#53bdeb] tracking-tighter ml-0.5" title="Delivered & Read">✓✓</span>
+                              )}
+                            </div>
                           </div>
-                          <span className="text-[10px] text-slate-500 mt-1 px-1">
-                            {msg.timestamp}
-                          </span>
                         </div>
                       );
                     })}
                 </div>
 
-                {/* Input Bar */}
+                {/* Input Bar (WhatsApp Bottom Chat Bar) */}
                 <form
                   onSubmit={handleSend}
-                  className="p-3 bg-slate-900 border-t border-slate-800 flex items-center gap-2"
+                  className="p-2.5 bg-[#202c33] border-t border-[#2a3942] flex items-center gap-2"
                 >
                   <input
                     type="text"
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
-                    placeholder={`Message ${activeChatPerson.name}...`}
-                    className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-400 transition-colors"
+                    placeholder="Type a message..."
+                    className="flex-1 bg-[#2a3942] border-none rounded-full px-4 py-2 text-sm text-white placeholder:text-[#8696a0] focus:outline-none focus:ring-1 focus:ring-[#00a884] transition-all"
                   />
                   <button
                     type="submit"
                     disabled={!inputText.trim()}
-                    className="p-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-2.5 rounded-full bg-[#00a884] hover:bg-[#029071] text-white font-bold transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed shrink-0 flex items-center justify-center"
                   >
                     <Send className="h-4 w-4" />
                   </button>

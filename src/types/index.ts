@@ -110,4 +110,6 @@ export interface ChatMessage {
   text: string;
   timestamp: string;
   isRead: boolean;
+  senderName?: string;
+  senderAvatar?: string;
 }

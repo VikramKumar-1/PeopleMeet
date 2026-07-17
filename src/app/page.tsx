@@ -12,7 +12,7 @@ import TiffinView from '@/components/views/TiffinView';
 import AccountView from '@/components/views/AccountView';
 import { CITIES, RADAR_PEOPLE, PG_LISTINGS, FLAT_LISTINGS, TIFFIN_LISTINGS } from '@/data/mockData';
 import AuthModal from '@/components/AuthModal';
-import { isSupabaseReady, fetchLiveProfiles, seedInitialSupabaseData, supabase, updateUserLocation, markUserOffline } from '@/utils/supabase';
+import { isSupabaseReady, fetchLiveProfiles, seedInitialSupabaseData, supabase, updateUserLocation, markUserOffline, sendRealtimeMessage, subscribeToRealtimeChat } from '@/utils/supabase';
 import { CityHub, RadarPerson, ChatMessage } from '@/types';
 import { CheckCircle2, X, MapPin } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -162,10 +162,36 @@ export default function Home() {
     }
   };
 
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    { id: 'm1', senderId: 'person-p1', receiverId: 'me', text: 'Hey! Are you around Boring Road for BPSC prep?', timestamp: 'Just now', isRead: false },
-    { id: 'm2', senderId: 'me', receiverId: 'person-p1', text: 'Yes! Looking for a study partner and good mess.', timestamp: 'Just now', isRead: true },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('stay_dine_messages');
+        if (saved && saved !== '[]') {
+          return JSON.parse(saved);
+        }
+      } catch (e) {}
+    }
+    return [
+      { id: 'm1', senderId: 'person-p1', receiverId: 'me', text: 'Hey! Are you around Boring Road for BPSC prep?', timestamp: '10:42 AM', isRead: false, senderName: 'Aman Kumar' },
+      { id: 'm2', senderId: 'me', receiverId: 'person-p1', text: 'Yes! Looking for a study partner and good mess.', timestamp: '10:45 AM', isRead: true },
+    ];
+  });
+
+  // Real-Time Peer-to-Peer Chat Subscription across tabs, browsers, and devices
+  useEffect(() => {
+    const unsubscribe = subscribeToRealtimeChat((incomingMsg: ChatMessage) => {
+      setMessages((prev) => {
+        // Prevent duplicate message entries
+        if (prev.some((m) => m.id === incomingMsg.id)) return prev;
+        const updated = [...prev, incomingMsg];
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('stay_dine_messages', JSON.stringify(updated));
+        }
+        return updated;
+      });
+    });
+    return () => { unsubscribe(); };
+  }, []);
 
   const showToast = (text: string) => {
     setToastMessage(text);
@@ -305,29 +331,39 @@ export default function Home() {
   };
 
   const handleSendMessage = (text: string) => {
-    const newMsg: ChatMessage = { id: `m-${Date.now()}`, senderId: 'me', receiverId: activeChatPerson?.id ?? 'general', text, timestamp: 'Now', isRead: true };
+    let myName = 'Vikash Kumar';
+    let myAvatar = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80';
+    if (typeof window !== 'undefined') {
+      try {
+        const profileRaw = localStorage.getItem('stay_dine_user_profile');
+        if (profileRaw) {
+          const p = JSON.parse(profileRaw);
+          if (p.fullName) myName = p.fullName;
+          if (p.avatarUrl) myAvatar = p.avatarUrl;
+        }
+      } catch (e) {}
+    }
+
+    const newMsg: ChatMessage = {
+      id: `m-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      senderId: myProfileId || 'me',
+      receiverId: activeChatPerson?.id ?? 'general',
+      text,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      isRead: true,
+      senderName: myName,
+      senderAvatar: myAvatar,
+    };
+
+    // 1. Add to our own messages state instantly
     setMessages((prev) => {
       const updated = [...prev, newMsg];
       if (typeof window !== 'undefined') localStorage.setItem('stay_dine_messages', JSON.stringify(updated));
       return updated;
     });
-    if (activeChatPerson) {
-      setTimeout(() => {
-        setMessages((prev) => {
-          // Check if peer already has messages to prevent annoying auto-message spam during real conversations
-          const existingReplies = prev.filter((m) => m.senderId === activeChatPerson.id);
-          if (existingReplies.length >= 1) return prev; // Don't interrupt if conversation has already begun!
 
-          const reply: ChatMessage = {
-            id: `r-${Date.now()}`, senderId: activeChatPerson.id, receiverId: 'me',
-            text: `Hey! Thanks for connecting. I am around ${currentCity ? currentCity.defaultHub : 'Lalpur'} right now. Where are you?`, timestamp: 'Just now', isRead: false,
-          };
-          const updated = [...prev, reply];
-          if (typeof window !== 'undefined') localStorage.setItem('stay_dine_messages', JSON.stringify(updated));
-          return updated;
-        });
-      }, 1200);
-    }
+    // 2. Broadcast across devices & tabs so the other person receives it in real time!
+    sendRealtimeMessage(newMsg);
   };
 
   const currentCityPeople = useMemo(() => {
@@ -508,7 +544,7 @@ export default function Home() {
 
       <ChatDrawer isOpen={isChatDrawerOpen} onClose={() => setIsChatDrawerOpen(false)}
         activeChatPerson={activeChatPerson} messages={messages}
-        onSendMessage={handleSendMessage} onSelectPerson={(p) => setActiveChatPerson(p)} peopleList={currentCityPeople} />
+        onSendMessage={handleSendMessage} onSelectPerson={(p) => setActiveChatPerson(p)} peopleList={currentCityPeople} myProfileId={myProfileId} />
 
       {/* Toast */}
       <AnimatePresence>

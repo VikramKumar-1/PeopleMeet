@@ -43,6 +43,8 @@ export const RADAR_PEOPLE: RadarPerson[] = [
     status: 'Walking on Road',
     hub: 'Boring Road',
     cityId: 'patna',
+    isOnline: true,
+    lastSeenAt: new Date(Date.now() - 2 * 60000).toISOString(),
   },
   {
     id: 'person-p2',
@@ -55,6 +57,8 @@ export const RADAR_PEOPLE: RadarPerson[] = [
     status: 'Online',
     hub: 'SK Puri',
     cityId: 'patna',
+    isOnline: true,
+    lastSeenAt: new Date(Date.now() - 1 * 60000).toISOString(),
   },
   {
     id: 'person-p3',
@@ -67,6 +71,8 @@ export const RADAR_PEOPLE: RadarPerson[] = [
     status: 'Study Mode',
     hub: 'Boring Road',
     cityId: 'patna',
+    isOnline: false,
+    lastSeenAt: new Date(Date.now() - 15 * 60000).toISOString(),
   },
   {
     id: 'person-p4',
@@ -79,6 +85,8 @@ export const RADAR_PEOPLE: RadarPerson[] = [
     status: 'Looking for PG',
     hub: 'Kankarbagh',
     cityId: 'patna',
+    isOnline: false,
+    lastSeenAt: new Date(Date.now() - 42 * 60000).toISOString(),
   },
 
   // Ranchi City Students (Lalpur Chowk)
@@ -93,6 +101,8 @@ export const RADAR_PEOPLE: RadarPerson[] = [
     status: 'Walking on Road',
     hub: 'Lalpur Chowk',
     cityId: 'ranchi',
+    isOnline: true,
+    lastSeenAt: new Date(Date.now() - 1 * 60000).toISOString(),
   },
   {
     id: 'person-r2',
@@ -105,6 +115,8 @@ export const RADAR_PEOPLE: RadarPerson[] = [
     status: 'Online',
     hub: 'Lalpur Chowk',
     cityId: 'ranchi',
+    isOnline: true,
+    lastSeenAt: new Date(Date.now() - 3 * 60000).toISOString(),
   },
   {
     id: 'person-r3',
@@ -117,6 +129,8 @@ export const RADAR_PEOPLE: RadarPerson[] = [
     status: 'Study Mode',
     hub: 'Lalpur Chowk',
     cityId: 'ranchi',
+    isOnline: false,
+    lastSeenAt: new Date(Date.now() - 18 * 60000).toISOString(),
   },
   {
     id: 'person-r4',
@@ -129,6 +143,8 @@ export const RADAR_PEOPLE: RadarPerson[] = [
     status: 'Online',
     hub: 'Lalpur Chowk',
     cityId: 'ranchi',
+    isOnline: false,
+    lastSeenAt: new Date(Date.now() - 35 * 60000).toISOString(),
   },
 
   // New Delhi City Students (Mukherjee Nagar)
@@ -143,6 +159,8 @@ export const RADAR_PEOPLE: RadarPerson[] = [
     status: 'Walking on Road',
     hub: 'Mukherjee Nagar',
     cityId: 'delhi',
+    isOnline: true,
+    lastSeenAt: new Date(Date.now() - 2 * 60000).toISOString(),
   },
   {
     id: 'person-d2',
@@ -155,6 +173,8 @@ export const RADAR_PEOPLE: RadarPerson[] = [
     status: 'Looking for PG',
     hub: 'GTB Nagar',
     cityId: 'delhi',
+    isOnline: false,
+    lastSeenAt: new Date(Date.now() - 24 * 60000).toISOString(),
   },
 ];
 
