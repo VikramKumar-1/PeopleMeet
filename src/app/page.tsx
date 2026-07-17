@@ -563,7 +563,7 @@ export default function Home() {
             ) : (
               <>
                 {activeTab === 'radar' && (
-                  <RadarView people={livePeopleList} currentCity={currentCity}
+                  <RadarView people={currentCityPeople} currentCity={currentCity}
                     onOpenChatWithPerson={handleOpenChatWithPerson}
                     onSendFriendRequest={handleSendFriendRequest} friendRequestsSent={friendRequestsSent} />
                 )}

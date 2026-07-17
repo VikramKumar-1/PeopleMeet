@@ -187,9 +187,29 @@ export default function RadarView({
       ? generate200PlusPeers(people, currentCity.id)
       : people.filter(p => p.cityId === currentCity.id);
 
-    // Exclude own profile so user does not see their own card ("own profile why it showing on radar dusra user na dekhega")
-    if (!myProfileId) return list;
-    list = list.filter(p => p.id !== myProfileId && !p.id.includes(myProfileId));
+    // Get our own full profile details from localStorage or state to guarantee we NEVER see ourselves
+    let myName = '';
+    let myEmail = '';
+    let myId = myProfileId || '';
+    if (typeof window !== 'undefined') {
+      try {
+        const pRaw = localStorage.getItem('stay_dine_user_profile');
+        if (pRaw) {
+          const p = JSON.parse(pRaw);
+          if (p.id) myId = p.id;
+          if (p.full_name) myName = p.full_name.trim().toLowerCase();
+          else if (p.fullName) myName = p.fullName.trim().toLowerCase();
+          if (p.email) myEmail = p.email.trim().toLowerCase();
+        }
+      } catch {}
+    }
+
+    list = list.filter((p) => {
+      if (myId && (p.id === myId || p.id.includes(myId))) return false;
+      if (myName && p.name.trim().toLowerCase() === myName) return false;
+      if (myEmail && (p as any).email && (p as any).email.trim().toLowerCase() === myEmail) return false;
+      return true;
+    });
 
     // EXACT LIVE GEODESIC DISTANCE RECALCULATION FROM USER ("uske paas se calculate hote rehna chahiye")
     if (userCoords && userCoords.lat && userCoords.lng) {
