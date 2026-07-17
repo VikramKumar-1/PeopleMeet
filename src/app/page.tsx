@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import useSWR from 'swr';
 import Navbar from '@/components/Navbar';
 import BottomNav, { TabType } from '@/components/BottomNav';
 import CitySelectorModal from '@/components/CitySelectorModal';
@@ -33,18 +34,7 @@ export default function Home() {
 
   const [friendRequestsSent, setFriendRequestsSent] = useState<string[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [myProfileId, setMyProfileId] = useState<string | null>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const p = localStorage.getItem('stay_dine_user_profile');
-        if (p) {
-          const parsed = JSON.parse(p);
-          if (parsed.id) return parsed.id;
-        }
-      } catch {}
-    }
-    return null;
-  });
+  const [myProfileId, setMyProfileId] = useState<string | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(() => {
     if (typeof window !== 'undefined') {
@@ -80,20 +70,36 @@ export default function Home() {
             }
           } catch {}
         }
-        const savedProfile = localStorage.getItem('stay_dine_user_profile');
-        if (savedProfile) {
-          try {
-            const p = JSON.parse(savedProfile);
-            if (p.id) setMyProfileId(p.id);
-          } catch {}
-        } else {
-          // If user has not logged in or registered yet, force open AuthModal mandatory onboarding!
-          setIsAuthModalOpen(true);
-        }
       };
       checkSavedData();
-      window.addEventListener('storage', checkSavedData);
-      return () => window.removeEventListener('storage', checkSavedData);
+
+      if (supabase) {
+        // Fetch current active session
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (session?.user) {
+            setMyProfileId(session.user.id);
+            setIsAuthModalOpen(false);
+          } else {
+            setMyProfileId(null);
+            setIsAuthModalOpen(true); // Force onboarding
+          }
+        });
+
+        // Listen for live auth changes (login/logout)
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+          if (session?.user) {
+            setMyProfileId(session.user.id);
+            setIsAuthModalOpen(false);
+          } else {
+            setMyProfileId(null);
+            setIsAuthModalOpen(true);
+          }
+        });
+
+        return () => subscription.unsubscribe();
+      } else {
+        setIsAuthModalOpen(true);
+      }
     }
   }, []);
 
@@ -256,42 +262,45 @@ export default function Home() {
     }
   };
 
-  // Supabase Real-Time Data Fetch & Auto-Seed on Empty Database
-  useEffect(() => {
-    const syncRealProfiles = async () => {
-      if (!isSupabaseReady()) return;
-      setIsLiveDatabaseActive(true);
-      const targetCityId = currentCity ? currentCity.id : 'ranchi';
-      const fetched = await fetchLiveProfiles(targetCityId, userCoords?.lat, userCoords?.lng);
-      
-      if (fetched && fetched.length > 0) {
-        setLivePeopleList(fetched);
-      } else {
-        // If the Supabase table is completely empty (0 rows), auto-seed our initial real records directly into cloud DB!
-        const seeded = await seedInitialSupabaseData();
-        if (seeded) {
-          const reFetched = await fetchLiveProfiles(targetCityId, userCoords?.lat, userCoords?.lng);
-          if (reFetched && reFetched.length > 0) {
-            setLivePeopleList(reFetched);
-          }
-        }
-      }
-    };
-    syncRealProfiles();
+  // SWR for Caching Data Fetching
+  const targetCityId = currentCity ? currentCity.id : 'ranchi';
+  const { data: fetchedProfiles, mutate } = useSWR(
+    isSupabaseReady() && targetCityId ? ['profiles', targetCityId, userCoords?.lat, userCoords?.lng] : null,
+    ([, cityId, lat, lng]) => fetchLiveProfiles(cityId as string, lat as number, lng as number),
+    { 
+      refreshInterval: 60000, // Background revalidate every minute
+      fallbackData: isSupabaseReady() ? [] : RADAR_PEOPLE 
+    }
+  );
 
-    // Subscribe to live instant updates (WebSockets) — when BOTH users have app open, they see each other in real-time
+  useEffect(() => {
+    if (fetchedProfiles && fetchedProfiles.length > 0) {
+      setLivePeopleList(fetchedProfiles);
+      setIsLiveDatabaseActive(true);
+    } else if (isSupabaseReady() && fetchedProfiles?.length === 0) {
+      // Auto seed if empty
+      seedInitialSupabaseData().then((success) => {
+        if (success) mutate();
+      });
+    }
+  }, [fetchedProfiles, mutate]);
+
+  // Subscribe to live instant updates (WebSockets)
+  useEffect(() => {
     if (supabase) {
       const channel = supabase
         .channel('public:profiles')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
-          syncRealProfiles();
+          mutate(); // Tell SWR to re-fetch on realtime DB changes
         })
         .subscribe();
       return () => { supabase?.removeChannel(channel); };
     }
-  }, [currentCity, userCoords]);
+  }, [currentCity, mutate]);
 
   // Production Lifecycle: Continuous GPS tracking + Online/Offline sync (30s heartbeat)
+  const lastSentCoordsRef = useRef<{lat: number, lng: number} | null>(null);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -304,6 +313,23 @@ export default function Home() {
       }
     } catch (e) {}
 
+    const handleGpsDebouncedUpdate = (lat: number, lng: number) => {
+      if (!myProfileId) return;
+      
+      // DEBOUNCING LOGIC: Only send to DB if moved > 50 meters
+      if (lastSentCoordsRef.current) {
+        const dist = haversineDistance(
+          lastSentCoordsRef.current.lat, 
+          lastSentCoordsRef.current.lng, 
+          lat, lng
+        );
+        if (dist < 50) return; // Skip minor flutter
+      }
+      
+      lastSentCoordsRef.current = { lat, lng };
+      updateUserLocation(myProfileId, lat, lng, 'gps');
+    };
+
     // Start continuous GPS tracking
     let watchId: number | null = null;
     if ('geolocation' in navigator) {
@@ -312,65 +338,41 @@ export default function Home() {
           const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
           setUserCoords(coords);
           localStorage.setItem('stay_dine_last_coords', JSON.stringify(coords));
+          handleGpsDebouncedUpdate(coords.lat, coords.lng);
         },
         (error) => { console.warn('GPS Warning:', error.message); },
         { 
-          enableHighAccuracy: false, // Uses cell-towers/wifi instead of battery-heavy GPS chip
-          maximumAge: 30000, // Cache location for 30 seconds to prevent rapid pinging
-          timeout: 15000 // Give up after 15s rather than hanging
+          enableHighAccuracy: false, 
+          maximumAge: 30000, 
+          timeout: 15000 
         }
       );
     }
 
-    // 3-minute heartbeat: update location in Supabase + mark online
+    // 3-minute heartbeat: Force update to keep 'online' status active
     const heartbeat = setInterval(() => {
-      if (!myProfileId) return;
-      try {
-        const saved = localStorage.getItem('stay_dine_last_coords');
-        if (saved) {
-          const c = JSON.parse(saved);
-          if (c.lat && c.lng) updateUserLocation(myProfileId, c.lat, c.lng, 'gps');
-        }
-      } catch (e) {}
+      if (!myProfileId || !userCoords) return;
+      updateUserLocation(myProfileId, userCoords.lat, userCoords.lng, 'gps');
     }, 180000);
 
     // Initial sync on mount
-    if (myProfileId) {
-      try {
-        const saved = localStorage.getItem('stay_dine_last_coords');
-        if (saved) {
-          const c = JSON.parse(saved);
-          if (c.lat && c.lng) updateUserLocation(myProfileId, c.lat, c.lng, 'gps');
-        }
-      } catch (e) {}
+    if (myProfileId && userCoords) {
+      handleGpsDebouncedUpdate(userCoords.lat, userCoords.lng);
     }
 
-    // Visibility change: mark offline when user switches tab, online when they come back
-    const handleVisibility = () => {
-      if (!myProfileId) return;
-      if (document.hidden) {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden' && myProfileId) {
         markUserOffline(myProfileId);
-      } else {
-        try {
-          const saved = localStorage.getItem('stay_dine_last_coords');
-          if (saved) {
-            const c = JSON.parse(saved);
-            if (c.lat && c.lng) updateUserLocation(myProfileId, c.lat, c.lng, 'gps');
-          }
-        } catch (e) {}
+      } else if (document.visibilityState === 'visible' && myProfileId && userCoords) {
+        updateUserLocation(myProfileId, userCoords.lat, userCoords.lng, 'gps');
       }
     };
-    document.addEventListener('visibilitychange', handleVisibility);
-
-    // Before unload: mark offline
-    const handleUnload = () => { if (myProfileId) markUserOffline(myProfileId); };
-    window.addEventListener('beforeunload', handleUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       clearInterval(heartbeat);
       if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-      document.removeEventListener('visibilitychange', handleVisibility);
-      window.removeEventListener('beforeunload', handleUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [myProfileId]);
 
@@ -450,26 +452,11 @@ export default function Home() {
       };
     });
 
-    // Get our own full profile details from localStorage or state to guarantee we NEVER see ourselves
-    let myName = '';
-    let myEmail = '';
+    // Get our own full profile details from state to guarantee we NEVER see ourselves
     let myId = myProfileId || '';
-    if (typeof window !== 'undefined') {
-      try {
-        const pRaw = localStorage.getItem('stay_dine_user_profile');
-        if (pRaw) {
-          const p = JSON.parse(pRaw);
-          if (p.id) myId = p.id;
-          if (p.full_name) myName = p.full_name.trim().toLowerCase();
-          if (p.email) myEmail = p.email.trim().toLowerCase();
-        }
-      } catch {}
-    }
 
     return calculatedList.filter((p) => {
       if (myId && (p.id === myId || p.id.includes(myId))) return false;
-      if (myName && p.name.trim().toLowerCase() === myName) return false;
-      if (myEmail && (p as any).email && (p as any).email.trim().toLowerCase() === myEmail) return false;
       return true;
     });
   }, [currentCity, livePeopleList, myProfileId, userCoords]);

@@ -151,6 +151,12 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
     setErrorMsg(null);
     setSuccessMsg(null);
 
+    if (!supabase) {
+      setErrorMsg('Database connection not established.');
+      setLoading(false);
+      return;
+    }
+
     if (mode === 'signup') {
       if (!fullName.trim() || !locality.trim() || !email.trim() || !password.trim()) {
         setErrorMsg('⚠️ Please fill out all required fields marked with (*): Name, Locality, Email & Password.');
@@ -183,55 +189,6 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
     }
 
     try {
-      if (!supabase) {
-        // Fallback if Supabase keys are still local
-        const defaultAvatar = gender === 'Girls'
-          ? 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop&q=80'
-          : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80';
-
-        // Capture real GPS for the profile (production-level)
-        let realLat = currentCity?.coordinates?.lat ?? 23.3645;
-        let realLng = currentCity?.coordinates?.lng ?? 85.3195;
-        let locSource: 'gps' | 'signup' = 'signup';
-        try {
-          const savedCoords = localStorage.getItem('stay_dine_last_coords');
-          if (savedCoords) {
-            const c = JSON.parse(savedCoords);
-            if (c.lat && c.lng) { realLat = c.lat; realLng = c.lng; locSource = 'gps'; }
-          }
-        } catch {}
-
-        const resolvedCityId = currentCity?.id || 'ranchi';
-
-        const mockProfile = {
-          id: `user-${Date.now()}`,
-          full_name: fullName.trim() || 'Verified Person',
-          email: email.trim().toLowerCase(),
-          gender,
-          bio: bio || 'Active on Radar',
-          locality_hub: locality.trim(),
-          city_id: resolvedCityId,
-          lat: realLat,
-          lng: realLng,
-          last_lat: realLat,
-          last_lng: realLng,
-          last_location_at: new Date().toISOString(),
-          location_source: locSource,
-          is_online: true,
-          last_seen_at: new Date().toISOString(),
-          status: 'Online',
-          avatar_url: customAvatar || defaultAvatar,
-        };
-        const savedEmails = JSON.parse(localStorage.getItem('stay_dine_registered_emails') || '[]');
-        savedEmails.push(email.trim().toLowerCase());
-        localStorage.setItem('stay_dine_registered_emails', JSON.stringify(savedEmails));
-        localStorage.setItem('stay_dine_user_profile', JSON.stringify(mockProfile));
-        if (onProfileCreated) onProfileCreated(mockProfile);
-        setSuccessMsg('Profile created & active on Radar!');
-        setTimeout(() => onClose(), 1000);
-        return;
-      }
-
       if (mode === 'signup') {
         const defaultAvatar = gender === 'Girls'
           ? 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop&q=80'
@@ -287,10 +244,6 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
           console.warn('Profile upsert warning:', profileError.message);
         }
 
-        const savedEmails = JSON.parse(localStorage.getItem('stay_dine_registered_emails') || '[]');
-        savedEmails.push(email.trim().toLowerCase());
-        localStorage.setItem('stay_dine_registered_emails', JSON.stringify(savedEmails));
-        localStorage.setItem('stay_dine_user_profile', JSON.stringify(newProfile));
         if (onProfileCreated) onProfileCreated(newProfile);
         setSuccessMsg('Profile registered inside Supabase! Welcome abroad!');
         setTimeout(() => onClose(), 1200);
@@ -311,9 +264,8 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
             .eq('id', authData.user.id)
             .single();
 
-          if (profileData) {
-            localStorage.setItem('stay_dine_user_profile', JSON.stringify(profileData));
-            if (onProfileCreated) onProfileCreated(profileData);
+          if (profileData && onProfileCreated) {
+            onProfileCreated(profileData);
           }
         }
         setSuccessMsg('Successfully signed in!');

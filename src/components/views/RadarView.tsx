@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
+import Image from 'next/image';
 import { ShieldAlert, RefreshCw, Eye, EyeOff, UserPlus, Check, ChevronRight, MessageCircle, X, Users, Sparkles, Flame, MapPin, Search, Filter, ChevronDown, ChevronUp } from 'lucide-react';
 import { RadarPerson, CityHub } from '@/types';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -389,7 +390,7 @@ export default function RadarView({
               {/* Instagram Story Gradient Ring + Profile Pic */}
               <div className="relative mt-1">
                 <div className="p-0.5 rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-purple-600 shadow-md group-hover:scale-105 transition-transform">
-                  <img src={peer.avatar} alt={peer.name}
+                  <Image width={64} height={64} src={peer.avatar} alt={peer.name}
                     className="h-16 w-16 rounded-full object-cover border-2 border-[var(--bg-card-solid)] block" />
                 </div>
                 <span className={`absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 border-[var(--bg-elevated)] ${freshnessColor}`} title={freshnessLabel} />
@@ -593,7 +594,7 @@ export default function RadarView({
                     )}
 
                     <div className={`relative rounded-full transition-all ${isSelected ? 'ring-[3px] ring-[var(--accent)] ring-offset-2 ring-offset-[var(--bg-primary)]' : ''}`}>
-                      <img src={p.avatar} alt={p.name}
+                      <Image width={48} height={48} src={p.avatar} alt={p.name}
                         className={`rounded-full object-cover border-2 border-[var(--bg-primary)] shadow-xl transition-all ${
                           isSelected ? 'h-12 w-12' : 'h-9 w-9'
                         }`} />
@@ -653,7 +654,7 @@ export default function RadarView({
               >
                 <div className="flex -space-x-2.5 overflow-hidden pl-1">
                   {overflowAvatars.map((av, i) => (
-                    <img key={i} src={av} alt="peer" className="inline-block h-6 w-6 rounded-full ring-2 ring-purple-900 object-cover" />
+                    <Image width={24} height={24} key={i} src={av} alt="peer" className="inline-block h-6 w-6 rounded-full ring-2 ring-purple-900 object-cover" />
                   ))}
                 </div>
                 <span className="text-[11px] font-black tracking-tight whitespace-nowrap flex items-center gap-1">
@@ -734,7 +735,7 @@ export default function RadarView({
 
               {/* Large Full-Screen Profile Pic Viewer ("sirf modal mei pic") */}
               <div className="w-full relative aspect-[4/5] max-h-[360px] sm:max-h-[420px] rounded-2xl overflow-hidden bg-black/40 border border-[var(--border-subtle)] shadow-inner">
-                <img src={selectedPerson.avatar} alt={selectedPerson.name}
+                <Image width={400} height={500} src={selectedPerson.avatar} alt={selectedPerson.name}
                   className="w-full h-full object-cover" />
                 
                 {/* Gradient overlay at bottom of photo for text legibility */}
@@ -841,7 +842,7 @@ export default function RadarView({
                   <div key={`list-${p.id}`} onClick={() => { setSelectedPerson(p); window.scrollTo({ top: 120, behavior: 'smooth' }); }}
                     className="card p-3.5 flex items-center gap-3 cursor-pointer hover:border-[var(--accent)] transition-all">
                     <div className="relative shrink-0">
-                      <img src={p.avatar} alt={p.name} className="h-12 w-12 rounded-full object-cover border-2 border-[var(--border-subtle)]" />
+                      <Image width={48} height={48} src={p.avatar} alt={p.name} className="h-12 w-12 rounded-full object-cover border-2 border-[var(--border-subtle)]" />
                       <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[var(--bg-card-solid)] ${isLive ? 'bg-emerald-500' : isRecent ? 'bg-amber-400' : 'bg-slate-400'}`} />
                     </div>
                     <div className="flex-1 min-w-0">

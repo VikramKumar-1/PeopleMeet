@@ -43,14 +43,31 @@ export const fetchLiveProfiles = async (
   try {
     const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('city_id', cityId);
+    let fetchedData = null;
 
-    if (error || !data || data.length === 0) return null;
+    // 1. Try high-performance PostGIS radial query if we have GPS (5000 meters = 5km)
+    if (userLat && userLng) {
+      const { data, error } = await supabase.rpc('get_nearby_users', {
+        lat: userLat,
+        lng: userLng,
+        radius_meters: 5000,
+      });
+      if (!error && data && data.length > 0) fetchedData = data;
+    }
 
-    return data.map((item: any) => {
+    // 2. Fallback: Fetch by city_id if no GPS or RPC failed
+    if (!fetchedData) {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('city_id', cityId)
+        .gte('last_seen_at', cutoff);
+      if (!error && data) fetchedData = data;
+    }
+
+    if (!fetchedData || fetchedData.length === 0) return null;
+
+    return fetchedData.map((item: any) => {
       const pLat = item.last_lat ?? item.lat ?? 0;
       const pLng = item.last_lng ?? item.lng ?? 0;
       const hasCoords = pLat !== 0 && pLng !== 0;
@@ -101,6 +118,7 @@ export const updateUserLocation = async (
       .update({
         last_lat: lat,
         last_lng: lng,
+        location: `SRID=4326;POINT(${lng} ${lat})`, // PostGIS Geography format
         last_location_at: new Date().toISOString(),
         location_source: source,
         is_online: true,
