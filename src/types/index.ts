@@ -22,7 +22,7 @@ export interface RadarPerson {
   bio: string;
   coordinates?: { lat: number; lng: number }; // Exact GPS location inside city
   distanceMeter: number; // Dynamically calculated via Haversine from user's live coordinate
-  status: 'Online' | 'Study Mode' | 'Looking for PG' | 'Walking on Road';
+  status: 'Online' | 'Offline' | 'Looking for PG' | 'Walking on Road';
   hub: string;
   cityId: CityId;
   isFriend?: boolean;

@@ -57,7 +57,7 @@ export default function ChatDrawer({
                   <MessageSquare className="h-5 w-5" />
                 </span>
                 <div>
-                  <h3 className="font-bold text-base text-white">Campus Direct Chat</h3>
+                  <h3 className="font-bold text-base text-white">Direct Messages</h3>
                   <p className="text-xs text-[#8696a0]">
                     {activeChatPerson
                       ? `End-to-End Encrypted · ${activeChatPerson.name}`
@@ -157,7 +157,7 @@ export default function ChatDrawer({
                 {/* Input Bar (WhatsApp Bottom Chat Bar) */}
                 <form
                   onSubmit={handleSend}
-                  className="p-2.5 bg-[#202c33] border-t border-[#2a3942] flex items-center gap-2"
+                  className="p-2.5 pb-5 sm:pb-2.5 bg-[#202c33] border-t border-[#2a3942] flex items-center gap-2"
                 >
                   <input
                     type="text"

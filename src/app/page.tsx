@@ -308,8 +308,12 @@ export default function Home() {
           setUserCoords(coords);
           localStorage.setItem('stay_dine_last_coords', JSON.stringify(coords));
         },
-        () => {},
-        { enableHighAccuracy: true, maximumAge: 5000 }
+        (error) => { console.warn('GPS Warning:', error.message); },
+        { 
+          enableHighAccuracy: false, // Uses cell-towers/wifi instead of battery-heavy GPS chip
+          maximumAge: 30000, // Cache location for 30 seconds to prevent rapid pinging
+          timeout: 15000 // Give up after 15s rather than hanging
+        }
       );
     }
 

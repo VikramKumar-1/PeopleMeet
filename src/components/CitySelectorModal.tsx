@@ -39,11 +39,8 @@ export default function CitySelectorModal({
               </span>
               <div>
                 <h3 className="text-lg font-bold text-white tracking-tight">
-                  Select Municipal City Boundary
+                  Select Your City
                 </h3>
-                <p className="text-xs text-slate-400">
-                  Calculates across entire municipal limits (No district restriction).
-                </p>
               </div>
             </div>
             <button
@@ -80,10 +77,7 @@ export default function CitySelectorModal({
                           : 'bg-slate-900 border-slate-800 text-slate-400'
                       }`}
                     >
-                      <span className="text-sm">{city.name.slice(0, 2).toUpperCase()}</span>
-                      <span className="text-[9px] text-cyan-400 font-mono font-normal">
-                        {city.municipalRadiusKm}km
-                      </span>
+                      <span className="text-base">{city.name.slice(0, 1).toUpperCase()}</span>
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
@@ -92,11 +86,8 @@ export default function CitySelectorModal({
                           {city.state}
                         </span>
                       </div>
-                      <p className="text-xs text-cyan-400 font-semibold mt-0.5 flex items-center gap-1">
-                        <Sparkles className="h-3.5 w-3.5" /> Full Municipal Limit: {city.municipalRadiusKm} km radius
-                      </p>
-                      <p className="text-[11px] text-slate-400 mt-1 line-clamp-1">
-                        Covers all roads: {city.hubs.join(', ')}
+                      <p className="text-[11px] text-slate-400 mt-1 line-clamp-1 leading-relaxed">
+                        {city.hubs.join(' • ')}
                       </p>
                     </div>
                   </div>

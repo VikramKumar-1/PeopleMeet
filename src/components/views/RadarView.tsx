@@ -495,6 +495,7 @@ export default function RadarView({
 
 
 
+          {/* Gender Filter */}
           <div className="flex overflow-x-auto no-scrollbar gap-1.5">
             {genderOptions.map((g) => (
               <button key={g} onClick={() => setSelectedGender(g)}
@@ -502,13 +503,21 @@ export default function RadarView({
                 {g}
               </button>
             ))}
-            <div className="w-px h-5 bg-[var(--border-subtle)] self-center mx-1 shrink-0" />
-            {radiusOptions.map((r) => (
-              <button key={r.value} onClick={() => setSelectedRadius(r.value)}
-                className={`chip ${selectedRadius === r.value ? 'chip-active font-bold' : ''}`}>
-                {r.label}
-              </button>
-            ))}
+          </div>
+
+          {/* Dedicated Radius / Range Filter */}
+          <div className="flex items-center gap-2.5 pt-1">
+            <span className="text-[10px] font-extrabold text-[var(--text-tertiary)] uppercase tracking-wider shrink-0 flex items-center gap-1">
+              <span className="animate-pulse text-[var(--accent)]">📍</span> Area:
+            </span>
+            <div className="flex overflow-x-auto no-scrollbar gap-1.5 flex-1 pb-1">
+              {radiusOptions.map((r) => (
+                <button key={r.value} onClick={() => setSelectedRadius(r.value)}
+                  className={`chip ${selectedRadius === r.value ? 'bg-[var(--accent)] text-white font-bold border-[var(--accent)] shadow-sm' : 'border-dashed border-[var(--border-subtle)] bg-[var(--bg-elevated)]'}`}>
+                  {r.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {availableHubs.length > 2 && (
@@ -814,12 +823,12 @@ export default function RadarView({
                 <p className="text-xs text-[var(--text-tertiary)] mt-0.5">Explore all people currently active within {selectedRadius}m</p>
               </div>
 
-              <div className="flex items-center gap-2">
-                <div className="relative w-full sm:w-56">
+              <div className="flex w-full sm:w-auto items-center gap-2">
+                <div className="relative flex-1 sm:w-56">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-tertiary)]" />
                   <input
                     type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search name, BPSC, hub..."
+                    placeholder="Search name, hub..."
                     className="w-full bg-[var(--bg-elevated)] border border-[var(--border-subtle)] rounded-xl pl-9 pr-3 py-1.5 text-xs text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:outline-none focus:border-[var(--accent)]"
                   />
                 </div>
@@ -828,7 +837,7 @@ export default function RadarView({
                   onClick={() => setShowAllPeopleList(false)}
                   className="px-3 py-1.5 rounded-xl bg-[var(--bg-elevated)] text-[var(--text-secondary)] border border-[var(--border-subtle)] text-xs font-bold hover:opacity-80 transition-colors shrink-0 flex items-center gap-1"
                 >
-                  <ChevronUp className="h-4 w-4" /> Hide Grid
+                  <ChevronUp className="h-4 w-4" /> Hide
                 </button>
               </div>
             </div>

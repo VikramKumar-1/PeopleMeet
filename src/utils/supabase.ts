@@ -69,7 +69,7 @@ export const fetchLiveProfiles = async (
         bio: item.bio || 'Active peer nearby',
         coordinates: hasCoords ? { lat: pLat, lng: pLng } : undefined,
         distanceMeter: distanceM,
-        status: item.is_online ? (item.status || 'Online') : 'Study Mode',
+        status: item.is_online ? (item.status || 'Online') : 'Offline',
         hub: item.locality_hub || 'Central Hub',
         cityId: item.city_id,
         lastLocationAt: item.last_location_at || item.created_at,
