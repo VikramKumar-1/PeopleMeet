@@ -287,23 +287,28 @@ export const sendRealtimeMessage = async (msg: ChatMessage): Promise<void> => {
     } catch {}
   }
 
-  // 3. Broadcast across devices via Supabase WebSockets (`no db schema needed`)
+  // 3. Broadcast across devices via Supabase WebSockets
   if (supabase) {
     try {
       if (!sharedChatChannel) {
-        sharedChatChannel = supabase.channel('campus_live_chat_channel');
-        await sharedChatChannel.subscribe();
+        sharedChatChannel = supabase.channel('campus_live_chat_channel', {
+          config: { broadcast: { ack: false, self: true } }
+        });
+        sharedChatChannel.subscribe((status: string) => {
+          if (status === 'SUBSCRIBED') {
+            sharedChatChannel.send({ type: 'broadcast', event: 'NEW_CHAT_MESSAGE', payload: msg });
+          }
+        });
+      } else {
+        sharedChatChannel.send({ type: 'broadcast', event: 'NEW_CHAT_MESSAGE', payload: msg });
       }
-      await sharedChatChannel.send({
-        type: 'broadcast',
-        event: 'NEW_CHAT_MESSAGE',
-        payload: msg,
-      });
     } catch (e) {
       console.warn('Supabase WebSocket broadcast warning:', e);
     }
   }
 };
+
+let isSubscribed = false;
 
 /**
  * Subscribe to incoming peer-to-peer real-time messages.
@@ -314,30 +319,32 @@ export const subscribeToRealtimeChat = (onReceiveMessage: (msg: ChatMessage) => 
       const bc = getBroadcastChannel();
       if (bc) {
         bc.onmessage = (event) => {
-          if (event.data && event.data.id) {
-            onReceiveMessage(event.data);
-          }
+          if (event.data && event.data.id) onReceiveMessage(event.data);
         };
       }
     } catch {}
   }
 
-  if (supabase) {
+  if (supabase && !isSubscribed) {
     try {
       if (!sharedChatChannel) {
-        sharedChatChannel = supabase.channel('campus_live_chat_channel');
+        sharedChatChannel = supabase.channel('campus_live_chat_channel', {
+          config: { broadcast: { ack: false, self: true } }
+        });
       }
-      sharedChatChannel
-        .on('broadcast', { event: 'NEW_CHAT_MESSAGE' }, (payload: any) => {
-          if (payload && payload.payload && payload.payload.id) {
-            onReceiveMessage(payload.payload);
-          }
-        })
-        .subscribe();
+      
+      sharedChatChannel.on('broadcast', { event: 'NEW_CHAT_MESSAGE' }, (payload: any) => {
+        if (payload && payload.payload && payload.payload.id) {
+          onReceiveMessage(payload.payload);
+        }
+      });
+      
+      sharedChatChannel.subscribe();
+      isSubscribed = true;
     } catch {}
   }
 
   return () => {
-    // We keep channel open so subsequent messages can be sent easily
+    // Keep channel alive but prevent double attachment in strict mode
   };
 };
