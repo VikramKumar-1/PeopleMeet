@@ -683,10 +683,11 @@ export default function RadarView({
           {/* Bottom Trigger: Explore List */}
           {filteredPeople.length > 0 && (
             <button
+              id="radar-banner"
               onClick={() => {
                 setShowAllPeopleList(!showAllPeopleList);
                 setTimeout(() => {
-                  const el = document.getElementById(showAllPeopleList ? 'suggested-section-anchor' : 'people-nearby-list');
+                  const el = document.getElementById(showAllPeopleList ? 'radar-banner' : 'people-nearby-list');
                   if (el) el.scrollIntoView({ behavior: 'smooth' });
                 }, 50);
               }}
@@ -788,98 +789,63 @@ export default function RadarView({
         )}
       </AnimatePresence>
 
-      <div id="suggested-section-anchor" />
+      <div id="suggested-section-anchor" className="pt-4" />
 
-      {/* 3. Conditional Layout Hierarchy ("radar upper rahega uske niche suggested agar 10+ hai toh click krne pe sab dikhega niche suggested niche chala jayega") */}
-      {/* 3. Conditional Layout Hierarchy */}
-      
-      {/* Section Header with See More / See Less Toggle */}
-      {filteredPeople.length > 0 && (
-        <div className="flex items-center justify-between px-2 mb-3 mt-2">
-          <h3 className="text-[15px] font-black text-[var(--text-primary)]">
-            {showAllPeopleList ? 'All People Nearby' : 'Top Suggested'}
-          </h3>
+      {/* Main List Section */}
+      <div id="people-nearby-list" className="space-y-3">
+        <div className={`space-y-2 ${showAllPeopleList ? 'max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar' : ''}`}>
+          {(showAllPeopleList ? filteredPeople : filteredPeople.slice(0, 6)).map((p) => {
+            const lastSeen = p.lastSeenAt ? new Date(p.lastSeenAt) : null;
+            const minsAgo = lastSeen ? Math.floor((Date.now() - lastSeen.getTime()) / 60000) : 999;
+            const isLive = p.isOnline || minsAgo < 5;
+            const isRecent = !isLive && minsAgo < 120;
+            const activeLabel = isLive ? '🟢 Live now' : isRecent ? `🟡 Active ${minsAgo}m ago` : minsAgo < 1440 ? `Seen ${Math.floor(minsAgo / 60)}h ago` : 'Seen today';
+            const distLabel = p.distanceMeter < 1000 ? `${p.distanceMeter}m away` : `${(p.distanceMeter / 1000).toFixed(1)}km away`;
+
+            return (
+              <div key={`list-${p.id}`} onClick={() => { setSelectedPerson(p); window.scrollTo({ top: 120, behavior: 'smooth' }); }}
+                className="card p-3.5 flex items-center gap-3 cursor-pointer hover:border-[var(--accent)] transition-all">
+                <div className="relative shrink-0">
+                  <Image width={48} height={48} src={p.avatar} alt={p.name} className="h-12 w-12 rounded-full object-cover border-2 border-[var(--border-subtle)]" />
+                  <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[var(--bg-card-solid)] ${isLive ? 'bg-emerald-500' : isRecent ? 'bg-amber-400' : 'bg-slate-400'}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-extrabold text-[var(--text-primary)] truncate">{p.name}</p>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--bg-elevated)] font-bold text-[var(--text-secondary)]">{p.gender}</span>
+                  </div>
+                  <p className="text-xs font-semibold text-[var(--accent)] truncate mt-0.5 flex items-center gap-1.5">
+                    <span>📍 {distLabel}</span>
+                    <span className="text-[10px] text-[var(--text-tertiary)] opacity-60">•</span>
+                    <span className={isLive ? 'text-emerald-500' : isRecent ? 'text-amber-500' : 'text-[var(--text-tertiary)]'}>{activeLabel}</span>
+                  </p>
+                  <p className="text-xs text-[var(--text-tertiary)] truncate mt-0.5">{p.bio}</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-[10px] text-[var(--text-tertiary)] bg-[var(--bg-elevated)] px-2 py-1 rounded-md mt-0.5">{p.status}</p>
+                </div>
+                <ChevronRight className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />
+              </div>
+            );
+          })}
+        </div>
+
+        {/* See Less Button at the bottom when expanded */}
+        {showAllPeopleList && filteredPeople.length > 6 && (
           <button
             onClick={() => {
-              setShowAllPeopleList(!showAllPeopleList);
-              if (!showAllPeopleList) {
-                setTimeout(() => {
-                  const el = document.getElementById('people-nearby-list');
-                  if (el) el.scrollIntoView({ behavior: 'smooth' });
-                }, 50);
-              }
+              setShowAllPeopleList(false);
+              setTimeout(() => {
+                const el = document.getElementById('radar-banner');
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+              }, 50);
             }}
-            className="text-xs font-extrabold text-[var(--accent)] flex items-center gap-1 bg-[var(--accent)]/10 px-3 py-1.5 rounded-full hover:bg-[var(--accent)]/20 transition-colors"
+            className="w-full mt-4 text-xs font-extrabold text-[var(--text-primary)] flex items-center justify-center gap-2 bg-[var(--bg-elevated)] border border-[var(--border-subtle)] py-3 rounded-xl hover:bg-[var(--border-subtle)] transition-colors"
           >
-            {showAllPeopleList ? 'See Less' : 'See More'}
-            {showAllPeopleList ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            See Less <ChevronUp className="h-4 w-4" />
           </button>
-        </div>
-      )}
-
-      {!showAllPeopleList ? (
-        <>
-          {/* Default View: Suggested right below Radar */}
-          {renderSuggestedSection()}
-        </>
-      ) : (
-        <>
-          {/* Expanded View: Full Interactive Searchable Grid opens first right below Radar */}
-          <div id="people-nearby-list" className="space-y-3 pt-2">
-
-
-
-            <div className="space-y-2">
-              {filteredPeople.slice(0, 50).map((p) => {
-                const lastSeen = p.lastSeenAt ? new Date(p.lastSeenAt) : null;
-                const minsAgo = lastSeen ? Math.floor((Date.now() - lastSeen.getTime()) / 60000) : 999;
-                const isLive = p.isOnline || minsAgo < 5;
-                const isRecent = !isLive && minsAgo < 120;
-                const activeLabel = isLive ? '🟢 Live now' : isRecent ? `🟡 Active ${minsAgo}m ago` : minsAgo < 1440 ? `Seen ${Math.floor(minsAgo / 60)}h ago` : 'Seen today';
-                const distLabel = p.distanceMeter < 1000 ? `${p.distanceMeter}m away` : `${(p.distanceMeter / 1000).toFixed(1)}km away`;
-
-                return (
-                  <div key={`list-${p.id}`} onClick={() => { setSelectedPerson(p); window.scrollTo({ top: 120, behavior: 'smooth' }); }}
-                    className="card p-3.5 flex items-center gap-3 cursor-pointer hover:border-[var(--accent)] transition-all">
-                    <div className="relative shrink-0">
-                      <Image width={48} height={48} src={p.avatar} alt={p.name} className="h-12 w-12 rounded-full object-cover border-2 border-[var(--border-subtle)]" />
-                      <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[var(--bg-card-solid)] ${isLive ? 'bg-emerald-500' : isRecent ? 'bg-amber-400' : 'bg-slate-400'}`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-extrabold text-[var(--text-primary)] truncate">{p.name}</p>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--bg-elevated)] font-bold text-[var(--text-secondary)]">{p.gender}</span>
-                      </div>
-                      <p className="text-xs font-semibold text-[var(--accent)] truncate mt-0.5 flex items-center gap-1.5">
-                        <span>📍 {distLabel}</span>
-                        <span className="text-[10px] text-[var(--text-tertiary)] opacity-60">•</span>
-                        <span className={isLive ? 'text-emerald-500' : isRecent ? 'text-amber-500' : 'text-[var(--text-tertiary)]'}>{activeLabel}</span>
-                      </p>
-                      <p className="text-xs text-[var(--text-tertiary)] truncate mt-0.5">{p.bio}</p>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-[10px] text-[var(--text-tertiary)] bg-[var(--bg-elevated)] px-2 py-1 rounded-md mt-0.5">{p.status}</p>
-                    </div>
-                    <ChevronRight className="h-4 w-4 text-[var(--text-tertiary)] shrink-0" />
-                  </div>
-                );
-              })}
-              {filteredPeople.length > 50 && (
-                <div className="p-4 text-center text-xs text-[var(--text-tertiary)] card">
-                  Showing top 50 nearest students out of {filteredPeople.length}. Use search or radius filter above to narrow down.
-                </div>
-              )}
-            </div>
-
-          </div>
-
-          {/* And exactly as requested ("niche suggested niche chala jayega"), Suggested moves underneath when Grid is open! */}
-          <div className="pt-6 border-t border-[var(--border-subtle)] mt-4">
-            <h3 className="text-sm font-bold text-[var(--text-secondary)] px-2 mb-3">Top Suggested</h3>
-            {renderSuggestedSection()}
-          </div>
-        </>
-      )}
+        )}
+      </div>
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import useSWR from 'swr';
 import Navbar from '@/components/Navbar';
+import SplashScreen from '@/components/SplashScreen';
 import BottomNav, { TabType } from '@/components/BottomNav';
 import CitySelectorModal from '@/components/CitySelectorModal';
 import ChatDrawer from '@/components/ChatDrawer';
@@ -36,23 +37,9 @@ export default function Home() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [myProfileId, setMyProfileId] = useState<string | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const c = localStorage.getItem('stay_dine_last_coords');
-        if (c) {
-          const parsed = JSON.parse(c);
-          if (parsed.lat && parsed.lng) return parsed;
-        }
-      } catch {}
-    }
-    return null;
-  });
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
 
-  const [isMounted, setIsMounted] = useState(false);
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -213,20 +200,10 @@ export default function Home() {
     }
   };
 
-  const [messages, setMessages] = useState<ChatMessage[]>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('stay_dine_messages');
-        if (saved && saved !== '[]') {
-          return JSON.parse(saved);
-        }
-      } catch (e) {}
-    }
-    return [
-      { id: 'm1', senderId: 'person-p1', receiverId: 'me', text: 'Hey! Are you around Boring Road for BPSC prep?', timestamp: '10:42 AM', isRead: false, senderName: 'Aman Kumar' },
-      { id: 'm2', senderId: 'me', receiverId: 'person-p1', text: 'Yes! Looking for a study partner and good mess.', timestamp: '10:45 AM', isRead: true },
-    ];
-  });
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    { id: 'm1', senderId: 'person-p1', receiverId: 'me', text: 'Hey! Are you around Boring Road for BPSC prep?', timestamp: '10:42 AM', isRead: false, senderName: 'Aman Kumar' },
+    { id: 'm2', senderId: 'me', receiverId: 'person-p1', text: 'Yes! Looking for a study partner and good mess.', timestamp: '10:45 AM', isRead: true },
+  ]);
 
   // Real-Time Peer-to-Peer Chat Subscription across tabs, browsers, and devices
   useEffect(() => {
@@ -461,12 +438,9 @@ export default function Home() {
     });
   }, [currentCity, livePeopleList, myProfileId, userCoords]);
 
-  if (!isMounted) {
-    return <div className="min-h-screen flex flex-col bg-[var(--bg-primary)]"></div>;
-  }
-
   return (
     <div className="min-h-screen flex flex-col">
+      <SplashScreen />
       <Navbar
         currentCity={currentCity}
         onOpenCitySelector={() => setIsCityModalOpen(true)}

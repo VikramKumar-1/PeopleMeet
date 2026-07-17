@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, User, CheckCircle2, MessageSquare, Heart, Sparkles } from 'lucide-react';
 import { ChatMessage, RadarPerson } from '@/types';
@@ -27,6 +27,15 @@ export default function ChatDrawer({
   myProfileId,
 }: ChatDrawerProps) {
   const [inputText, setInputText] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isOpen, activeChatPerson]);
 
   if (!isOpen) return null;
 
@@ -35,6 +44,7 @@ export default function ChatDrawer({
     if (!inputText.trim()) return;
     onSendMessage(inputText.trim());
     setInputText('');
+    setTimeout(scrollToBottom, 50); // Ensure scroll happens after DOM update
   };
 
   return (
@@ -42,7 +52,7 @@ export default function ChatDrawer({
       <div className="fixed inset-0 z-50 overflow-hidden bg-black/70 backdrop-blur-sm">
         <div className="absolute inset-0" onClick={onClose} />
 
-        <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
+        <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-10">
           <motion.div
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
@@ -152,9 +162,12 @@ export default function ChatDrawer({
                         </div>
                       );
                     })}
+                  
+                  {/* Invisible element to anchor the auto-scroll */}
+                  <div ref={messagesEndRef} />
                 </div>
 
-                {/* Input Bar (WhatsApp Bottom Chat Bar) */}
+                {/* WhatsApp Style Chat Input */}
                 <form
                   onSubmit={handleSend}
                   className="p-2.5 pb-5 sm:pb-2.5 bg-[#202c33] border-t border-[#2a3942] flex items-center gap-2"
