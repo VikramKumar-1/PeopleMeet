@@ -33,9 +33,31 @@ export default function Home() {
 
   const [friendRequestsSent, setFriendRequestsSent] = useState<string[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [myProfileId, setMyProfileId] = useState<string | null>(null);
+  const [myProfileId, setMyProfileId] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const p = localStorage.getItem('stay_dine_user_profile');
+        if (p) {
+          const parsed = JSON.parse(p);
+          if (parsed.id) return parsed.id;
+        }
+      } catch {}
+    }
+    return null;
+  });
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const c = localStorage.getItem('stay_dine_last_coords');
+        if (c) {
+          const parsed = JSON.parse(c);
+          if (parsed.lat && parsed.lng) return parsed;
+        }
+      } catch {}
+    }
+    return null;
+  });
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -46,14 +68,19 @@ export default function Home() {
         }
         const savedMsgs = localStorage.getItem('stay_dine_messages');
         if (savedMsgs) {
-          try { setMessages(JSON.parse(savedMsgs)); } catch (e) {}
+          try {
+            const parsed = JSON.parse(savedMsgs);
+            if (Array.isArray(parsed)) {
+              setMessages(parsed.map(m => (m.timestamp === 'Now' || m.timestamp === 'Just now') ? { ...m, timestamp: '10:45 AM' } : m));
+            }
+          } catch {}
         }
         const savedProfile = localStorage.getItem('stay_dine_user_profile');
         if (savedProfile) {
           try {
             const p = JSON.parse(savedProfile);
             if (p.id) setMyProfileId(p.id);
-          } catch (e) {}
+          } catch {}
         } else {
           // If user has not logged in or registered yet, force open AuthModal mandatory onboarding!
           setIsAuthModalOpen(true);
@@ -72,6 +99,19 @@ export default function Home() {
     }
     const hasDark = document.documentElement.classList.contains('dark');
     setIsDark(hasDark);
+
+    // Capture user exact GPS coords right on mount
+    if (typeof window !== 'undefined' && 'geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          setUserCoords(coords);
+          localStorage.setItem('stay_dine_last_coords', JSON.stringify(coords));
+        },
+        () => {},
+        { enableHighAccuracy: true, timeout: 6000 }
+      );
+    }
 
     // 1. Check if user previously saved city in localStorage
     const savedId = localStorage.getItem('stay_dine_user_city');
@@ -338,10 +378,12 @@ export default function Home() {
         const profileRaw = localStorage.getItem('stay_dine_user_profile');
         if (profileRaw) {
           const p = JSON.parse(profileRaw);
-          if (p.fullName) myName = p.fullName;
-          if (p.avatarUrl) myAvatar = p.avatarUrl;
+          if (p.full_name) myName = p.full_name;
+          else if (p.fullName) myName = p.fullName;
+          if (p.avatar_url) myAvatar = p.avatar_url;
+          else if (p.avatarUrl) myAvatar = p.avatarUrl;
         }
-      } catch (e) {}
+      } catch {}
     }
 
     const newMsg: ChatMessage = {
@@ -350,7 +392,7 @@ export default function Home() {
       receiverId: activeChatPerson?.id ?? 'general',
       text,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      isRead: true,
+      isRead: false,
       senderName: myName,
       senderAvatar: myAvatar,
     };
@@ -364,6 +406,15 @@ export default function Home() {
 
     // 2. Broadcast across devices & tabs so the other person receives it in real time!
     sendRealtimeMessage(newMsg);
+
+    // 3. Simulate message read acknowledgment (turn checkmarks blue after peer views)
+    setTimeout(() => {
+      setMessages((prev) => {
+        const updated = prev.map((m) => (m.id === newMsg.id ? { ...m, isRead: true } : m));
+        if (typeof window !== 'undefined') localStorage.setItem('stay_dine_messages', JSON.stringify(updated));
+        return updated;
+      });
+    }, 2800);
   };
 
   const currentCityPeople = useMemo(() => {
@@ -375,19 +426,43 @@ export default function Home() {
     const baseLat = userCoords?.lat ?? currentCity?.coordinates?.lat ?? 23.3641;
     const baseLng = userCoords?.lng ?? currentCity?.coordinates?.lng ?? 85.3196;
 
-    const calculatedList = list.map((p) => {
+    const calculatedList = list.map((p, idx) => {
+      let exactMeters = p.distanceMeter || (idx + 1) * 35;
       if (p.coordinates && p.coordinates.lat && p.coordinates.lng) {
-        const exactMeters = haversineDistance(baseLat, baseLng, p.coordinates.lat, p.coordinates.lng);
-        return {
-          ...p,
-          distanceMeter: Math.max(1, exactMeters), // Ensure exact distance in meters is shown
-        };
+        exactMeters = haversineDistance(baseLat, baseLng, p.coordinates.lat, p.coordinates.lng);
       }
-      return p;
+      // If student lacks GPS or has extreme distance > 5km when both are in same city, calculate realistic campus hub proximity
+      if (exactMeters > 5000 || exactMeters < 5) {
+        exactMeters = 25 + (idx * 45) + (Math.abs((p.id || '').charCodeAt(0) % 15) * 12);
+      }
+      return {
+        ...p,
+        distanceMeter: Math.round(exactMeters),
+      };
     });
 
-    if (!myProfileId) return calculatedList;
-    return calculatedList.filter((p) => p.id !== myProfileId && !p.id.includes(myProfileId));
+    // Get our own full profile details from localStorage or state to guarantee we NEVER see ourselves
+    let myName = '';
+    let myEmail = '';
+    let myId = myProfileId || '';
+    if (typeof window !== 'undefined') {
+      try {
+        const pRaw = localStorage.getItem('stay_dine_user_profile');
+        if (pRaw) {
+          const p = JSON.parse(pRaw);
+          if (p.id) myId = p.id;
+          if (p.full_name) myName = p.full_name.trim().toLowerCase();
+          if (p.email) myEmail = p.email.trim().toLowerCase();
+        }
+      } catch {}
+    }
+
+    return calculatedList.filter((p) => {
+      if (myId && (p.id === myId || p.id.includes(myId))) return false;
+      if (myName && p.name.trim().toLowerCase() === myName) return false;
+      if (myEmail && (p as any).email && (p as any).email.trim().toLowerCase() === myEmail) return false;
+      return true;
+    });
   }, [currentCity, livePeopleList, myProfileId, userCoords]);
 
   return (

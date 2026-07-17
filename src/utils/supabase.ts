@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { RadarPerson, PgListing } from '@/types';
+import { RadarPerson, PgListing, ChatMessage } from '@/types';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -250,36 +250,55 @@ export const seedInitialSupabaseData = async (): Promise<boolean> => {
  * Send a real-time peer-to-peer message across devices & tabs.
  * Uses Supabase Realtime Broadcast + BroadcastChannel for instant transmission.
  */
-export const sendRealtimeMessage = async (msg: any): Promise<void> => {
+let sharedChatChannel: any = null;
+let broadcastChannelInstance: BroadcastChannel | null = null;
+
+const getBroadcastChannel = () => {
+  if (typeof window === 'undefined') return null;
+  if (!broadcastChannelInstance) {
+    try {
+      broadcastChannelInstance = new BroadcastChannel('stay_dine_campus_chat');
+    } catch {}
+  }
+  return broadcastChannelInstance;
+};
+
+/**
+ * Send a real-time peer-to-peer message across devices & tabs.
+ * Uses Supabase Realtime Broadcast + BroadcastChannel for instant transmission.
+ */
+export const sendRealtimeMessage = async (msg: ChatMessage): Promise<void> => {
   if (typeof window !== 'undefined') {
     // 1. Send via local BroadcastChannel for multi-tab testing on the same browser
     try {
-      const bc = new BroadcastChannel('stay_dine_campus_chat');
-      bc.postMessage(msg);
-      bc.close();
-    } catch (e) {}
+      const bc = getBroadcastChannel();
+      if (bc) bc.postMessage(msg);
+    } catch {}
 
     // 2. Persist to global chat history in localStorage so new tabs can sync immediately
     try {
-      const historyRaw = localStorage.getItem('stay_dine_global_chat_history') || '[]';
+      const historyRaw = localStorage.getItem('stay_dine_messages') || '[]';
       const history = JSON.parse(historyRaw);
-      history.push(msg);
-      // Keep last 150 messages
-      if (history.length > 150) history.splice(0, history.length - 150);
-      localStorage.setItem('stay_dine_global_chat_history', JSON.stringify(history));
-    } catch (e) {}
+      if (!history.some((m: ChatMessage) => m.id === msg.id)) {
+        history.push(msg);
+        if (history.length > 200) history.splice(0, history.length - 200);
+        localStorage.setItem('stay_dine_messages', JSON.stringify(history));
+      }
+    } catch {}
   }
 
   // 3. Broadcast across devices via Supabase WebSockets (`no db schema needed`)
   if (supabase) {
     try {
-      await supabase
-        .channel('campus_live_chat_channel')
-        .send({
-          type: 'broadcast',
-          event: 'NEW_CHAT_MESSAGE',
-          payload: msg,
-        });
+      if (!sharedChatChannel) {
+        sharedChatChannel = supabase.channel('campus_live_chat_channel');
+        await sharedChatChannel.subscribe();
+      }
+      await sharedChatChannel.send({
+        type: 'broadcast',
+        event: 'NEW_CHAT_MESSAGE',
+        payload: msg,
+      });
     } catch (e) {
       console.warn('Supabase WebSocket broadcast warning:', e);
     }
@@ -289,37 +308,36 @@ export const sendRealtimeMessage = async (msg: any): Promise<void> => {
 /**
  * Subscribe to incoming peer-to-peer real-time messages.
  */
-export const subscribeToRealtimeChat = (onReceiveMessage: (msg: any) => void): (() => void) => {
-  let bc: BroadcastChannel | null = null;
+export const subscribeToRealtimeChat = (onReceiveMessage: (msg: ChatMessage) => void): (() => void) => {
   if (typeof window !== 'undefined') {
     try {
-      bc = new BroadcastChannel('stay_dine_campus_chat');
-      bc.onmessage = (event) => {
-        if (event.data && event.data.id) {
-          onReceiveMessage(event.data);
-        }
-      };
-    } catch (e) {}
+      const bc = getBroadcastChannel();
+      if (bc) {
+        bc.onmessage = (event) => {
+          if (event.data && event.data.id) {
+            onReceiveMessage(event.data);
+          }
+        };
+      }
+    } catch {}
   }
 
-  let supabaseSubscription: any = null;
   if (supabase) {
     try {
-      supabaseSubscription = supabase
-        .channel('campus_live_chat_channel')
+      if (!sharedChatChannel) {
+        sharedChatChannel = supabase.channel('campus_live_chat_channel');
+      }
+      sharedChatChannel
         .on('broadcast', { event: 'NEW_CHAT_MESSAGE' }, (payload: any) => {
           if (payload && payload.payload && payload.payload.id) {
             onReceiveMessage(payload.payload);
           }
         })
         .subscribe();
-    } catch (e) {}
+    } catch {}
   }
 
   return () => {
-    if (bc) try { bc.close(); } catch (e) {}
-    if (supabaseSubscription && supabase) {
-      try { supabase.removeChannel(supabaseSubscription); } catch (e) {}
-    }
+    // We keep channel open so subsequent messages can be sent easily
   };
 };

@@ -117,10 +117,9 @@ export default function ChatDrawer({
 
                   {messages
                     .filter((msg) => 
-                      msg.senderId === activeChatPerson.id || 
-                      msg.receiverId === activeChatPerson.id || 
-                      msg.receiverId === 'general' ||
-                      (myProfileId && (msg.senderId === myProfileId || msg.receiverId === myProfileId))
+                      (msg.senderId === activeChatPerson.id && (msg.receiverId === 'me' || (myProfileId && msg.receiverId === myProfileId) || msg.receiverId === 'general')) ||
+                      ((msg.senderId === 'me' || (myProfileId && msg.senderId === myProfileId)) && msg.receiverId === activeChatPerson.id) ||
+                      (msg.receiverId === 'general' && (msg.senderId === activeChatPerson.id || msg.senderId === 'me' || (myProfileId && msg.senderId === myProfileId)))
                     )
                     .map((msg) => {
                       const isMe = msg.senderId === 'me' || (myProfileId && msg.senderId === myProfileId);
@@ -146,7 +145,7 @@ export default function ChatDrawer({
                             <div className={`flex items-center justify-end gap-1 mt-1 text-[10px] ${isMe ? 'text-[#8696a0] sm:text-emerald-200/90' : 'text-[#8696a0]'}`}>
                               <span>{msg.timestamp}</span>
                               {isMe && (
-                                <span className="font-bold text-[#53bdeb] tracking-tighter ml-0.5" title="Delivered & Read">✓✓</span>
+                                <span className={`font-bold tracking-tighter ml-0.5 ${msg.isRead ? 'text-[#53bdeb]' : 'text-[#8696a0]'}`} title={msg.isRead ? "Read" : "Delivered"}>✓✓</span>
                               )}
                             </div>
                           </div>
