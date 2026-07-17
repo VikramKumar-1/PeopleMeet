@@ -362,15 +362,22 @@ export default function RadarView({
   // Render Suggested Friend Requests component block
   const renderSuggestedSection = () => (
     <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-[13px] font-bold text-[var(--text-secondary)] uppercase tracking-wider px-1">
+            Suggested
+          </h3>
+        </div>
+      </div>
       <div className="flex overflow-x-auto pb-3 pt-1 gap-3.5 no-scrollbar scroll-smooth snap-x snap-mandatory">
         {suggestions.map((peer) => {
           // Freshness badge logic (production-level)
           const lastSeen = peer.lastSeenAt ? new Date(peer.lastSeenAt) : null;
           const minsAgo = lastSeen ? Math.floor((Date.now() - lastSeen.getTime()) / 60000) : 999;
           const isLive = peer.isOnline || minsAgo < 5;
-          const isRecent = !isLive && minsAgo < 120;
+          const isRecent = !isLive && minsAgo < 60;
           const freshnessColor = isLive ? 'bg-emerald-500' : isRecent ? 'bg-amber-400' : 'bg-slate-400';
-          const freshnessLabel = isLive ? 'Live now' : isRecent ? `${minsAgo}m ago` : minsAgo < 1440 ? `${Math.floor(minsAgo / 60)}h ago` : 'Seen today';
+          const freshnessLabel = isLive ? 'Live now' : isRecent ? `${minsAgo}m ago` : minsAgo < 1440 ? `${Number((minsAgo / 60).toFixed(1))}h ago` : 'Seen today';
 
           // Distance display
           const distLabel = peer.distanceMeter < 1000 ? `${peer.distanceMeter}m` : `${(peer.distanceMeter / 1000).toFixed(1)}km`;
@@ -555,7 +562,7 @@ export default function RadarView({
                 const lastSeen = p.lastSeenAt ? new Date(p.lastSeenAt) : null;
                 const minsAgo = lastSeen ? Math.floor((Date.now() - lastSeen.getTime()) / 60000) : 999;
                 const isLive = p.isOnline || minsAgo < 5;
-                const activeLabel = isLive ? 'Live now' : minsAgo < 120 ? `${minsAgo}m ago` : minsAgo < 1440 ? `${Math.floor(minsAgo / 60)}h ago` : 'today';
+                const activeLabel = isLive ? 'Live now' : minsAgo < 60 ? `${minsAgo}m ago` : minsAgo < 1440 ? `${Number((minsAgo / 60).toFixed(1))}h ago` : 'today';
 
                 return (
                   <motion.div key={p.id}
@@ -793,8 +800,8 @@ export default function RadarView({
               const lastSeen = p.lastSeenAt ? new Date(p.lastSeenAt) : null;
               const minsAgo = lastSeen ? Math.floor((Date.now() - lastSeen.getTime()) / 60000) : 999;
               const isLive = p.isOnline || minsAgo < 5;
-              const isRecent = !isLive && minsAgo < 120;
-              const activeLabel = isLive ? '🟢 Live now' : isRecent ? `🟡 Active ${minsAgo}m ago` : minsAgo < 1440 ? `Seen ${Math.floor(minsAgo / 60)}h ago` : 'Seen today';
+              const isRecent = !isLive && minsAgo < 60;
+              const activeLabel = isLive ? '🟢 Live now' : isRecent ? `🟡 Active ${minsAgo}m ago` : minsAgo < 1440 ? `Seen ${Number((minsAgo / 60).toFixed(1))}h ago` : 'Seen today';
               const distLabel = p.distanceMeter < 1000 ? `${p.distanceMeter}m away` : `${(p.distanceMeter / 1000).toFixed(1)}km away`;
 
               return (
@@ -825,7 +832,7 @@ export default function RadarView({
             })}
           </div>
 
-          {/* See Less Button at the bottom when expanded */}
+          {/* See Less Button at the bottom of expanded list */}
           {filteredPeople.length > 3 && (
             <button
               onClick={() => {
@@ -835,11 +842,16 @@ export default function RadarView({
                   if (el) el.scrollIntoView({ behavior: 'smooth' });
                 }, 50);
               }}
-              className="w-full mt-4 text-xs font-extrabold text-[var(--text-primary)] flex items-center justify-center gap-2 bg-[var(--bg-elevated)] border border-[var(--border-subtle)] py-3 rounded-xl hover:bg-[var(--border-subtle)] transition-colors"
+              className="w-full mt-2 text-xs font-extrabold text-[var(--text-primary)] flex items-center justify-center gap-2 bg-[var(--bg-elevated)] border border-[var(--border-subtle)] py-3 rounded-xl hover:bg-[var(--border-subtle)] transition-colors"
             >
               See Less <ChevronUp className="h-4 w-4" />
             </button>
           )}
+
+          {/* Suggested moves underneath when Grid is open! */}
+          <div className="pt-4 border-t border-[var(--border-subtle)] mt-2">
+            {renderSuggestedSection()}
+          </div>
         </div>
       )}
     </div>

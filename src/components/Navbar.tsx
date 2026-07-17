@@ -34,7 +34,7 @@ export default function Navbar({
           {/* Left: Logo */}
         <div className="flex items-center gap-3">
           <span className="text-lg font-black tracking-tight flex items-center gap-1" style={{ color: 'var(--text-primary)' }}>
-            Stay<span style={{ color: 'var(--accent)' }}>&amp;</span>Dine
+            We<span style={{ color: 'var(--accent)' }}>Mate</span>✨
             <span className="text-[10px] px-1.5 py-0.5 rounded font-extrabold bg-[var(--accent)]/15 text-[var(--accent)] border border-[var(--accent)]/30 hidden sm:inline-block">CAMPUS</span>
           </span>
         </div>

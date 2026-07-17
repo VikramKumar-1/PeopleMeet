@@ -19,13 +19,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PeopleMeet — Live People & Proximity Radar",
-  description: "Live proximity radar to find people, verified PGs, flats & tiffins across your city.",
-  applicationName: "PeopleMeet",
+  title: "WeMate — Live Campus & Proximity Radar",
+  description: "Live proximity radar to find peers, verified PGs, flats & tiffins across your city.",
+  applicationName: "WeMate",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "PeopleMeet",
+    title: "WeMate",
   },
 };
 
