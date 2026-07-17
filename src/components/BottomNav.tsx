@@ -20,23 +20,27 @@ const tabs: { id: TabType; label: string; icon: React.ElementType }[] = [
 export default function BottomNav({ activeTab, onChangeTab }: BottomNavProps) {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50">
-      {/* Mobile: Floating pill */}
-      <div className="md:hidden mx-3 mb-3">
-        <div className="flex items-center justify-around bg-[var(--bg-card-solid)]/95 backdrop-blur-2xl rounded-2xl border border-[var(--border-subtle)] shadow-[var(--shadow-elevated)] px-2 py-2 pb-safe">
+      {/* Mobile: Floating pill with scroll fade mask */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 pointer-events-none">
+        {/* Scroll Fade Mask (Bottom) */}
+        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[var(--bg-primary)] to-transparent opacity-95 -z-10" />
+        
+        <div className="mx-3 mb-3 flex items-center justify-around rounded-2xl border border-[var(--glass-border)] shadow-[var(--shadow-elevated)] px-1.5 py-1.5 pb-safe backdrop-blur-md pointer-events-auto"
+             style={{ background: 'var(--glass-bg)' }}>
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             return (
               <button key={tab.id} onClick={() => onChangeTab(tab.id)}
-                className="relative flex flex-col items-center justify-center w-20 py-1.5 rounded-xl transition-all active:scale-90">
+                className="relative flex flex-col items-center justify-center w-16 sm:w-20 py-1.5 rounded-xl transition-all active:scale-90">
                 {isActive && (
                   <motion.div layoutId="bottomTabPill"
-                    className="absolute inset-0 bg-[var(--bg-elevated)] rounded-xl"
+                    className="absolute inset-0 bg-[var(--bg-elevated)] rounded-xl opacity-80"
                     transition={{ type: 'spring', stiffness: 500, damping: 35 }} />
                 )}
-                <Icon className={`relative z-10 h-[22px] w-[22px] transition-colors ${isActive ? 'text-[var(--accent)]' : 'text-[var(--text-tertiary)]'}`}
+                <Icon className={`relative z-10 h-5 w-5 transition-colors ${isActive ? 'text-[var(--accent)]' : 'text-[var(--text-tertiary)]'}`}
                   strokeWidth={isActive ? 2.5 : 1.8} />
-                <span className={`relative z-10 text-[11px] mt-1 font-semibold tracking-wide transition-colors ${isActive ? 'text-[var(--text-primary)]' : 'text-[var(--text-tertiary)]'}`}>
+                <span className={`relative z-10 text-[10px] mt-0.5 font-bold tracking-wide transition-colors ${isActive ? 'text-[var(--text-primary)]' : 'text-[var(--text-tertiary)]'}`}>
                   {tab.label}
                 </span>
               </button>
