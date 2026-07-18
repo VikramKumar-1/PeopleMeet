@@ -63,9 +63,9 @@ export default function RadarView({
   onSendFriendRequest,
   friendRequestsSent,
 }: RadarViewProps) {
-  const [isBroadcasting, setIsBroadcasting] = useState(true);
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [selectedGender, setSelectedGender] = useState<string>('All');
-  const [selectedRadius, setSelectedRadius] = useState<number>(1000);
+  const [selectedRadius, setSelectedRadius] = useState<number>(50000);
   const [selectedPerson, setSelectedPerson] = useState<RadarPerson | null>(null);
   const [shuffleSeed, setShuffleSeed] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
@@ -441,33 +441,6 @@ export default function RadarView({
   return (
     <div className="space-y-5 pb-28 md:pb-8">
 
-      {people.length === 0 && (
-        <div className="card p-5 text-center bg-[var(--bg-elevated)] border border-[var(--border-subtle)] shadow-xl max-w-md mx-auto my-4 space-y-3 animate-fade-in">
-          <div className="h-12 w-12 rounded-2xl bg-[var(--accent)]/15 border border-[var(--accent)]/30 flex items-center justify-center mx-auto text-2xl shadow-sm">
-            🛰️
-          </div>
-          <h3 className="text-base font-black text-[var(--text-primary)]">
-            Be the First Person on Radar here in {currentCity.name.split(' (')[0]}! 🚀
-          </h3>
-          <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
-            We are waiting for peers to check in across this exact radius. Broadcast your profile so nearby people can connect with you right now!
-          </p>
-          <div className="flex items-center justify-center gap-2 pt-1">
-            <button
-              onClick={() => setIsBroadcasting(true)}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-[var(--accent)] to-blue-600 text-white text-xs font-bold shadow-md hover:brightness-110 transition-all"
-            >
-              ⚡ Broadcast My Profile
-            </button>
-            <button
-              onClick={() => alert('Share link copied! Send to your coaching & hostel WhatsApp group to invite peers right to this radar.')}
-              className="px-4 py-2 rounded-xl bg-[var(--bg-card-solid)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-xs font-semibold hover:bg-[var(--border-hover)] transition-all"
-            >
-              📲 Invite Peers
-            </button>
-          </div>
-        </div>
-      )}
 
 
       {/* 2. Radar Card ("radar upper rahega") */}
@@ -513,7 +486,7 @@ export default function RadarView({
             <div className="flex overflow-x-auto no-scrollbar gap-1.5 flex-1 pb-1">
               {radiusOptions.map((r) => (
                 <button key={r.value} onClick={() => setSelectedRadius(r.value)}
-                  className={`chip ${selectedRadius === r.value ? 'bg-[var(--accent)] text-white font-bold border-[var(--accent)] shadow-sm' : 'border-dashed border-[var(--border-subtle)] bg-[var(--bg-elevated)]'}`}>
+                  className={`chip ${selectedRadius === r.value ? 'chip-active' : ''}`}>
                   {r.label}
                 </button>
               ))}
