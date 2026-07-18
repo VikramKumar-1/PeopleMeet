@@ -89,6 +89,7 @@ export default function AccountView({ currentCity, onOpenListModal, friendReques
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
         onProfileCreated={(profile) => setUserProfile(profile)}
+        editProfileData={userProfile}
       />
 
       {/* List Property CTA */}

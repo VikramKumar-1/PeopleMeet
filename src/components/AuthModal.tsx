@@ -1,5 +1,5 @@
 'use client';
-
+/* eslint-disable react-hooks/set-state-in-effect */
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Sparkles, MapPin, UserPlus, LogIn, CheckCircle2, ShieldCheck, Mail, Lock, User, Camera, Upload, RefreshCw, Check } from 'lucide-react';
 import { supabase } from '@/utils/supabase';
@@ -27,12 +27,27 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Live Selfie & Photo Upload States
   const [customAvatar, setCustomAvatar] = useState<string | null>(editProfileData?.avatar_url || null);
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      if (editProfileData) {
+        setMode('edit');
+        setFullName(editProfileData.full_name || '');
+        setGender(editProfileData.gender || 'Boys');
+        setLocality(editProfileData.locality_hub || 'Lalpur Chowk');
+        setBio(editProfileData.bio || '');
+        setEmail(editProfileData.email || '');
+        setCustomAvatar(editProfileData.avatar_url || null);
+      } else {
+        setMode('signup');
+      }
+    }
+  }, [isOpen, editProfileData]);
 
   useEffect(() => {
     let stream: MediaStream | null = null;

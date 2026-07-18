@@ -10,7 +10,7 @@ interface ListPropertyModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentCity: CityHub;
-  onSuccessListing: (newListingTitle: string, category: string) => void;
+  onSuccessListing: (listingData: any) => void;
 }
 
 export default function ListPropertyModal({
@@ -42,7 +42,15 @@ export default function ListPropertyModal({
         spread: 80,
         origin: { y: 0.6 },
       });
-      onSuccessListing(title || 'New Premium Property', category);
+      onSuccessListing({
+        title: title || 'New Premium Property',
+        category,
+        rentPerMonth: Number(rent),
+        contactPhone: phone,
+        whatsappNumber: whatsapp,
+        cityId: currentCity.id,
+        hub: currentCity.defaultHub,
+      });
       onClose();
       // Reset form
       setStep(1);

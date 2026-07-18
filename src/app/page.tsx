@@ -14,7 +14,11 @@ import TiffinView from '@/components/views/TiffinView';
 import AccountView from '@/components/views/AccountView';
 import { CITIES, RADAR_PEOPLE, PG_LISTINGS, FLAT_LISTINGS, TIFFIN_LISTINGS } from '@/data/mockData';
 import AuthModal from '@/components/AuthModal';
-import { isSupabaseReady, fetchLiveProfiles, seedInitialSupabaseData, supabase, updateUserLocation, markUserOffline, sendRealtimeMessage, subscribeToRealtimeChat, haversineDistance } from '@/utils/supabase';
+import { 
+  isSupabaseReady, fetchLiveProfiles, seedInitialSupabaseData, supabase, updateUserLocation, markUserOffline, 
+  sendRealtimeMessage, subscribeToRealtimeChat, haversineDistance,
+  fetchMessagesFromDb, saveMessageToDb, sendFriendRequestToDb, fetchSentFriendRequestsFromDb, createPropertyListingInDb
+} from '@/utils/supabase';
 import { CityHub, RadarPerson, ChatMessage } from '@/types';
 import { CheckCircle2, X, MapPin } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -64,8 +68,16 @@ export default function Home() {
         // Fetch current active session
         supabase.auth.getSession().then(({ data: { session } }) => {
           if (session?.user) {
-            setMyProfileId(session.user.id);
+            const uid = session.user.id;
+            setMyProfileId(uid);
             setIsAuthModalOpen(false);
+            
+            fetchSentFriendRequestsFromDb(uid).then(reqs => {
+               if (reqs.length > 0) {
+                 setFriendRequestsSent(reqs);
+                 localStorage.setItem('stay_dine_friend_requests', JSON.stringify(reqs));
+               }
+            });
           } else {
             const hasLocalProfile = localStorage.getItem('stay_dine_user_profile');
             if (!hasLocalProfile) {
@@ -229,7 +241,7 @@ export default function Home() {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  const handleSendFriendRequest = (personId: string) => {
+  const handleSendFriendRequest = async (personId: string) => {
     if (!friendRequestsSent.includes(personId)) {
       const updated = [...friendRequestsSent, personId];
       setFriendRequestsSent(updated);
@@ -237,6 +249,10 @@ export default function Home() {
         localStorage.setItem('stay_dine_friend_requests', JSON.stringify(updated));
       }
       showToast('Wave / Friend request sent! 👋');
+      
+      if (myProfileId) {
+        await sendFriendRequestToDb(myProfileId, personId);
+      }
     } else {
       showToast('Already sent wave to this peer! ✨');
     }
@@ -355,6 +371,14 @@ export default function Home() {
   const handleOpenChatWithPerson = (person: RadarPerson) => {
     setActiveChatPerson(person);
     setIsChatDrawerOpen(true);
+    
+    if (myProfileId) {
+      fetchMessagesFromDb(myProfileId, person.id).then(dbMsgs => {
+        if (dbMsgs.length > 0) {
+          setMessages(dbMsgs);
+        }
+      });
+    }
   };
 
   const handleSendMessage = (text: string) => {
@@ -391,7 +415,10 @@ export default function Home() {
       return updated;
     });
 
-    // 2. Broadcast across devices & tabs so the other person receives it in real time!
+    // 2. Save to DB for true persistence
+    saveMessageToDb(newMsg);
+
+    // 3. Broadcast across devices & tabs so the other person receives it in real time!
     sendRealtimeMessage(newMsg);
 
     // 3. Simulate message read acknowledgment (turn checkmarks blue after peer views)
@@ -592,7 +619,12 @@ export default function Home() {
             currentCity={currentCity} onSelectCity={(city) => { setCurrentCity(city); localStorage.setItem('stay_dine_user_city', city.id); showToast(`Switched to ${city.name.split(' (')[0]}`); }} />
 
           <ListPropertyModal isOpen={isListModalOpen} onClose={() => setIsListModalOpen(false)}
-            currentCity={currentCity} onSuccessListing={(t, c) => showToast(`"${t}" is now live as ${c}!`)} />
+            currentCity={currentCity} onSuccessListing={async (listingData) => {
+              showToast(`"${listingData.title}" is now live as ${listingData.category}!`);
+              if (myProfileId) {
+                await createPropertyListingInDb({ ...listingData, ownerId: myProfileId });
+              }
+            }} />
         </>
       )}
 

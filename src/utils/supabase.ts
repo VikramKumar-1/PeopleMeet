@@ -366,3 +366,120 @@ export const subscribeToRealtimeChat = (onReceiveMessage: (msg: ChatMessage) => 
     // Keep channel alive but prevent double attachment in strict mode
   };
 };
+
+/**
+ * Fetch messages between two users
+ */
+export const fetchMessagesFromDb = async (userId1: string, userId2: string): Promise<ChatMessage[]> => {
+  if (!supabase) return [];
+  try {
+    const { data, error } = await supabase
+      .from('messages')
+      .select('*')
+      .or(`and(sender_id.eq.${userId1},receiver_id.eq.${userId2}),and(sender_id.eq.${userId2},receiver_id.eq.${userId1})`)
+      .order('created_at', { ascending: true });
+
+    if (error || !data) return [];
+    
+    return data.map(m => ({
+      id: m.id,
+      senderId: m.sender_id,
+      receiverId: m.receiver_id,
+      text: m.text,
+      timestamp: m.timestamp,
+      isRead: m.is_read,
+      senderName: m.sender_name,
+      senderAvatar: m.sender_avatar,
+    }));
+  } catch (e) {
+    console.error('Error fetching messages:', e);
+    return [];
+  }
+};
+
+/**
+ * Save a new message to the database
+ */
+export const saveMessageToDb = async (msg: ChatMessage): Promise<void> => {
+  if (!supabase) return;
+  try {
+    await supabase.from('messages').insert({
+      id: msg.id,
+      sender_id: msg.senderId,
+      receiver_id: msg.receiverId,
+      text: msg.text,
+      timestamp: msg.timestamp,
+      is_read: msg.isRead,
+      sender_name: msg.senderName,
+      sender_avatar: msg.senderAvatar
+    });
+  } catch (e) {
+    console.error('Error saving message:', e);
+  }
+};
+
+/**
+ * Send a friend request
+ */
+export const sendFriendRequestToDb = async (senderId: string, receiverId: string): Promise<boolean> => {
+  if (!supabase) return false;
+  try {
+    const { error } = await supabase.from('friend_requests').insert({
+      sender_id: senderId,
+      receiver_id: receiverId,
+      status: 'pending'
+    });
+    return !error;
+  } catch (e) {
+    console.error('Error sending friend request:', e);
+    return false;
+  }
+};
+
+/**
+ * Fetch sent friend requests
+ */
+export const fetchSentFriendRequestsFromDb = async (senderId: string): Promise<string[]> => {
+  if (!supabase) return [];
+  try {
+    const { data, error } = await supabase
+      .from('friend_requests')
+      .select('receiver_id')
+      .eq('sender_id', senderId);
+    
+    if (error || !data) return [];
+    return data.map(req => req.receiver_id);
+  } catch (e) {
+    console.error('Error fetching friend requests:', e);
+    return [];
+  }
+};
+
+/**
+ * Create a new property listing
+ */
+export const createPropertyListingInDb = async (listing: Omit<PgListing, 'id' | 'distanceMeter'>): Promise<boolean> => {
+  if (!supabase) return false;
+  try {
+    // Determine the type column value
+    let typeVal = 'Co-ed';
+    if ('type' in listing) typeVal = listing.type;
+    else if ('category' in listing) typeVal = (listing as any).category;
+    
+    const { error } = await supabase.from('pg_listings').insert({
+      owner_id: (listing as any).ownerId || null,
+      title: listing.title,
+      city_id: listing.cityId,
+      locality_hub: listing.hub,
+      rent_per_month: listing.rentPerMonth || (listing as any).singleThaliPrice || 0,
+      type: typeVal,
+      food_included: listing.foodIncluded ?? true,
+      image_url: listing.image || ''
+    });
+    return !error;
+  } catch (e) {
+    console.error('Error creating property listing:', e);
+    return false;
+  }
+};
+
