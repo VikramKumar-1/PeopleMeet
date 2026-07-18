@@ -12,22 +12,23 @@ interface AuthModalProps {
   onProfileCreated?: (profile: { id: string; full_name?: string; avatar_url?: string; [key: string]: unknown }) => void;
   isMandatory?: boolean;
   currentCity?: CityHub | null;
+  editProfileData?: { id: string; full_name?: string; avatar_url?: string; gender?: 'Boys' | 'Girls' | 'Others'; locality_hub?: string; bio?: string; email?: string } | null;
 }
 
-export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandatory, currentCity }: AuthModalProps) {
-  const [mode, setMode] = useState<'signup' | 'login'>('signup');
-  const [fullName, setFullName] = useState('');
-  const [gender, setGender] = useState<'Boys' | 'Girls' | 'Others'>('Boys');
-  const [locality, setLocality] = useState('Lalpur Chowk');
-  const [bio, setBio] = useState('');
-  const [email, setEmail] = useState('');
+export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandatory, currentCity, editProfileData }: AuthModalProps) {
+  const [mode, setMode] = useState<'signup' | 'login' | 'edit'>(editProfileData ? 'edit' : 'signup');
+  const [fullName, setFullName] = useState(editProfileData?.full_name || '');
+  const [gender, setGender] = useState<'Boys' | 'Girls' | 'Others'>(editProfileData?.gender || 'Boys');
+  const [locality, setLocality] = useState(editProfileData?.locality_hub || 'Lalpur Chowk');
+  const [bio, setBio] = useState(editProfileData?.bio || '');
+  const [email, setEmail] = useState(editProfileData?.email || '');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   // Live Selfie & Photo Upload States
-  const [customAvatar, setCustomAvatar] = useState<string | null>(null);
+  const [customAvatar, setCustomAvatar] = useState<string | null>(editProfileData?.avatar_url || null);
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -258,8 +259,26 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
 
         if (onProfileCreated) onProfileCreated(newProfile);
         setSuccessMsg('Profile registered inside Supabase! Welcome abroad!');
-        setTimeout(() => onClose(), 1200);
+        setTimeout(onClose, 1200);
 
+      } else if (mode === 'edit') {
+        if (!editProfileData?.id) throw new Error("Missing profile ID for edit");
+        
+        const updatedProfile = {
+          full_name: fullName.trim() || 'Updated Person',
+          gender,
+          bio: bio.trim() || 'Active peer nearby',
+          locality_hub: locality.trim(),
+          avatar_url: customAvatar || editProfileData.avatar_url,
+          last_seen_at: new Date().toISOString(),
+        };
+
+        const { error: updateError } = await supabase.from('profiles').update(updatedProfile).eq('id', editProfileData.id);
+        if (updateError) throw updateError;
+        
+        if (onProfileCreated) onProfileCreated({ id: editProfileData.id, ...updatedProfile });
+        setSuccessMsg('Profile details updated successfully! ✨');
+        setTimeout(onClose, 1200);
       } else {
         // Sign In
         const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
@@ -303,14 +322,14 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
       onClick={isMandatory ? undefined : onClose}
     >
       <motion.div
-        initial={{ scale: 0.92, opacity: 0, y: 24 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.92, opacity: 0, y: 24 }}
+        initial={{ scale: 0.95, y: 20, opacity: 0 }}
+        animate={{ scale: 1, y: 0, opacity: 1 }}
+        exit={{ scale: 0.95, y: 20, opacity: 0 }}
         transition={{ type: 'spring', stiffness: 350, damping: 28 }}
         onClick={(e) => e.stopPropagation()}
         className="relative w-full max-w-md p-[1.5px] rounded-[28px] bg-gradient-to-b from-indigo-500/60 via-purple-500/30 to-pink-500/20 shadow-[0_20px_60px_-15px_rgba(124,58,237,0.4)] overflow-hidden"
       >
-        <div className="relative w-full rounded-[27px] bg-[#090c15]/95 p-6 sm:p-7 backdrop-blur-xl overflow-y-auto max-h-[90vh]">
+        <div className="relative w-full rounded-[27px] bg-[#090c15]/95 p-4 sm:p-7 backdrop-blur-xl overflow-y-auto max-h-[90vh]">
           {/* Top glowing ambient accent */}
           <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-64 h-32 bg-gradient-to-r from-purple-600/30 via-indigo-600/30 to-pink-600/30 blur-3xl pointer-events-none" />
 
@@ -333,35 +352,37 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
 
           <div className="text-center mt-2 relative z-10">
             <h3 className="text-2xl font-black text-white tracking-tight">
-              {mode === 'signup' ? 'Join PeopleMeet' : 'Welcome Back'}
+              {mode === 'signup' ? 'Join PeopleMeet' : mode === 'edit' ? 'Update Profile' : 'Welcome Back'}
             </h3>
           </div>
 
-          {/* Premium Tab Switcher */}
-          <div className="flex rounded-2xl bg-black/40 p-1.5 my-5 border border-white/10 relative z-10 backdrop-blur-md">
-            <button
-              type="button"
-              onClick={() => setMode('signup')}
-              className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all duration-200 flex items-center justify-center gap-1.5 ${
-                mode === 'signup'
-                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-purple-500/25 scale-[1.02]'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <UserPlus className="h-3.5 w-3.5" /> New Profile
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode('login')}
-              className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all duration-200 flex items-center justify-center gap-1.5 ${
-                mode === 'login'
-                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-purple-500/25 scale-[1.02]'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <LogIn className="h-3.5 w-3.5" /> Sign In
-            </button>
-          </div>
+          {/* Premium Tab Switcher - Only for Auth */}
+          {mode !== 'edit' && (
+            <div className="flex rounded-2xl bg-black/40 p-1 my-4 border border-white/10 relative z-10 backdrop-blur-md">
+              <button
+                type="button"
+                onClick={() => setMode('signup')}
+                className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all duration-200 flex items-center justify-center gap-1.5 ${
+                  mode === 'signup'
+                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-purple-500/25 scale-[1.02]'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <UserPlus className="h-3.5 w-3.5" /> New Profile
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode('login')}
+                className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all duration-200 flex items-center justify-center gap-1.5 ${
+                  mode === 'login'
+                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-purple-500/25 scale-[1.02]'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <LogIn className="h-3.5 w-3.5" /> Sign In
+              </button>
+            </div>
+          )}
 
           {errorMsg && (
             <motion.div
@@ -383,11 +404,11 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
             </motion.div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4 relative z-10">
-            {mode === 'signup' && (
+          <form onSubmit={handleSubmit} className="space-y-3 relative z-10">
+            {(mode === 'signup' || mode === 'edit') && (
               <>
                 {/* Profile Photo */}
-                <div className="p-3.5 rounded-2xl bg-black/40 border border-white/10 space-y-3 shadow-inner">
+                <div className="p-3 rounded-2xl bg-black/40 border border-white/10 space-y-2 shadow-inner">
                   <div className="flex items-center justify-between">
                     <label className="text-sm font-semibold text-slate-300 flex items-center gap-1.5">
                       <span>Profile Photo</span>
@@ -490,7 +511,7 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
                       placeholder="e.g. Vikram Kumar"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 text-[16px] sm:text-sm bg-black/50 border border-white/10 rounded-xl text-white font-medium placeholder:text-slate-600 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
+                      className="w-full pl-10 pr-4 py-2 text-sm bg-black/50 border border-white/10 rounded-xl text-white font-medium placeholder:text-slate-600 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
                     />
                   </div>
                 </div>
@@ -504,7 +525,7 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
                     <select
                       value={gender}
                       onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setGender(e.target.value as 'Boys' | 'Girls' | 'Others')}
-                      className="w-full px-3.5 py-2.5 text-[16px] sm:text-xs bg-black/50 border border-white/10 rounded-xl text-white font-semibold focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all cursor-pointer"
+                      className="w-full px-3.5 py-2 text-[16px] sm:text-xs bg-black/50 border border-white/10 rounded-xl text-white font-semibold focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all cursor-pointer"
                     >
                       <option value="Boys" className="bg-[#090c15]">Boys / Male</option>
                       <option value="Girls" className="bg-[#090c15]">Girls / Female</option>
@@ -537,7 +558,7 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
                         placeholder="e.g. Rajiv Nagar Lane 4"
                         value={locality}
                         onChange={(e) => setLocality(e.target.value)}
-                        className="w-full pl-8 pr-3 py-2.5 text-[16px] sm:text-xs bg-black/50 border border-white/10 rounded-xl text-white font-semibold placeholder:text-slate-600 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
+                        className="w-full pl-8 pr-3 py-2 text-[16px] sm:text-xs bg-black/50 border border-white/10 rounded-xl text-white font-semibold placeholder:text-slate-600 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
                       />
                     </div>
                   </div>
@@ -553,52 +574,57 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
                     placeholder="e.g. BPSC Target 2026. Looking for room partner near library!"
                     value={bio}
                     onChange={(e) => setBio(e.target.value)}
-                    className="w-full px-4 py-2.5 text-[16px] sm:text-xs bg-black/50 border border-white/10 rounded-xl text-white font-medium placeholder:text-slate-600 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
+                    className="w-full px-4 py-2 text-[16px] sm:text-xs bg-black/50 border border-white/10 rounded-xl text-white font-medium placeholder:text-slate-600 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
                   />
                 </div>
               </>
             )}
 
-            <div>
-              <label className="block text-sm font-semibold text-slate-300 mb-1.5 flex items-center">
-                <span>Email Address</span>
-                <span className="text-red-400 ml-1">*</span>
-              </label>
-              <div className="relative group">
-                <Mail className="absolute left-3.5 top-3 h-4 w-4 text-slate-500 group-focus-within:text-purple-400 transition-colors" />
-                <input
-                  type="email"
-                  required
-                  placeholder="you@gmail.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 text-[16px] sm:text-sm bg-black/50 border border-white/10 rounded-xl text-white font-semibold placeholder:text-slate-600 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
-                />
-              </div>
-            </div>
+            {(mode === 'signup' || mode === 'login') && (
+              <div className="p-3 rounded-2xl bg-black/40 border border-white/10 space-y-3 shadow-inner">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-300 mb-1.5 flex items-center">
+                    <span>Email Address</span>
+                    <span className="text-red-400 ml-1">*</span>
+                  </label>
+                  <div className="relative group">
+                    <Mail className="absolute left-3.5 top-3 h-4 w-4 text-slate-500 group-focus-within:text-purple-400 transition-colors" />
+                    <input
+                      type="email"
+                      required
+                      placeholder="you@gmail.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 text-[16px] sm:text-sm bg-black/50 border border-white/10 rounded-xl text-white font-semibold placeholder:text-slate-600 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
+                    />
+                  </div>
+                </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-slate-300 mb-1.5 flex items-center">
-                <span>Password</span>
-                <span className="text-red-400 ml-1">*</span>
-              </label>
-              <div className="relative group">
-                <Lock className="absolute left-3.5 top-3 h-4 w-4 text-slate-500 group-focus-within:text-purple-400 transition-colors" />
-                <input
-                  type="password"
-                  required
-                  placeholder="Min 6 characters"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 text-[16px] sm:text-sm bg-black/50 border border-white/10 rounded-xl text-white font-semibold placeholder:text-slate-600 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
-                />
+                <div>
+                  <label className="block text-sm font-semibold text-slate-300 mb-1.5 flex items-center">
+                    <span>Password</span>
+                    <span className="text-red-400 ml-1">*</span>
+                  </label>
+                  <div className="relative group">
+                    <Lock className="absolute left-3.5 top-3 h-4 w-4 text-slate-500 group-focus-within:text-purple-400 transition-colors" />
+                    <input
+                      type="password"
+                      required
+                      minLength={6}
+                      placeholder="Min 6 characters"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 text-[16px] sm:text-sm bg-black/50 border border-white/10 rounded-xl text-white font-semibold placeholder:text-slate-600 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 mt-3 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white text-sm font-black shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-[1.01] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2 border border-white/15"
+              className="w-full py-3 mt-3 rounded-xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white font-black text-sm shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-[1.01] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2 border border-white/15"
             >
               {loading ? (
                 <span className="flex items-center gap-2">

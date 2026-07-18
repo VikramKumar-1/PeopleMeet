@@ -419,7 +419,7 @@ export default function Home() {
         exactMeters = haversineDistance(baseLat, baseLng, p.coordinates.lat, p.coordinates.lng);
       }
       // If student lacks GPS or has extreme distance > 5km when both are in same city, calculate realistic campus hub proximity
-      if (exactMeters > 5000 || exactMeters < 5) {
+      if (exactMeters > 5000) {
         exactMeters = 25 + (idx * 45) + (Math.abs((p.id || '').charCodeAt(0) % 15) * 12);
       }
       return {
