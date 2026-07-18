@@ -21,7 +21,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Home() {
   const [currentCity, setCurrentCity] = useState<CityHub | null>(null);
-  const [livePeopleList, setLivePeopleList] = useState<RadarPerson[]>(isSupabaseReady() ? [] : RADAR_PEOPLE);
+  const [livePeopleList, setLivePeopleList] = useState<RadarPerson[]>([]);
   const [isLiveDatabaseActive, setIsLiveDatabaseActive] = useState(false);
   const [locationDetectStatus, setLocationDetectStatus] = useState<'detecting' | 'permission_needed' | 'success' | 'failed'>('detecting');
   const [activeTab, setActiveTab] = useState<TabType>('radar');
@@ -67,17 +67,20 @@ export default function Home() {
             setMyProfileId(session.user.id);
             setIsAuthModalOpen(false);
           } else {
-            setMyProfileId(null);
-            setIsAuthModalOpen(true); // Force onboarding
+            const hasLocalProfile = localStorage.getItem('stay_dine_user_profile');
+            if (!hasLocalProfile) {
+              setMyProfileId(null);
+              setIsAuthModalOpen(true); // Force onboarding only if completely unauthenticated
+            }
           }
         });
 
         // Listen for live auth changes (login/logout)
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
           if (session?.user) {
             setMyProfileId(session.user.id);
             setIsAuthModalOpen(false);
-          } else {
+          } else if (event === 'SIGNED_OUT') {
             setMyProfileId(null);
             setIsAuthModalOpen(true);
           }
@@ -246,7 +249,6 @@ export default function Home() {
     ([, cityId, lat, lng]) => fetchLiveProfiles(cityId as string, lat as number, lng as number),
     { 
       refreshInterval: 60000, // Background revalidate every minute
-      fallbackData: isSupabaseReady() ? [] : RADAR_PEOPLE 
     }
   );
 
@@ -254,13 +256,10 @@ export default function Home() {
     if (fetchedProfiles && fetchedProfiles.length > 0) {
       setLivePeopleList(fetchedProfiles);
       setIsLiveDatabaseActive(true);
-    } else if (isSupabaseReady() && fetchedProfiles?.length === 0) {
-      // Auto seed if empty
-      seedInitialSupabaseData().then((success) => {
-        if (success) mutate();
-      });
+    } else if (fetchedProfiles?.length === 0) {
+      setLivePeopleList([]);
     }
-  }, [fetchedProfiles, mutate]);
+  }, [fetchedProfiles]);
 
   // Subscribe to live instant updates (WebSockets)
   useEffect(() => {

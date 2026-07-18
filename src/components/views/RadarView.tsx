@@ -695,8 +695,7 @@ export default function RadarView({
             >
               {showAllPeopleList ? (
                 <>
-                  <Users className="h-4 w-4 text-[var(--text-secondary)]" />
-                  <span className="uppercase tracking-wider text-[var(--text-secondary)]">Viewing All People</span>
+                  <span className="uppercase tracking-wider text-[var(--text-secondary)] font-extrabold">Close</span>
                   <ChevronUp className="h-3.5 w-3.5 text-[var(--text-secondary)] opacity-80" />
                 </>
               ) : (
