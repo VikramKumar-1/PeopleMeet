@@ -63,7 +63,7 @@ export default function RadarView({
   onSendFriendRequest,
   friendRequestsSent,
 }: RadarViewProps) {
-  const [isBroadcasting, setIsBroadcasting] = useState(false);
+  const [isBroadcasting, setIsBroadcasting] = useState(true);
   const [selectedGender, setSelectedGender] = useState<string>('All');
   const [selectedRadius, setSelectedRadius] = useState<number>(50000);
   const [selectedPerson, setSelectedPerson] = useState<RadarPerson | null>(null);
