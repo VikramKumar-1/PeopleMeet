@@ -99,6 +99,7 @@ export default function RadarView({
   const handleEnableRealGps = () => {
     if (!typeof window || !navigator.geolocation) {
       console.warn('Geolocation is not supported by your browser.');
+      alert('Location is not supported by your browser.');
       return;
     }
     setGpsStatus('locating');
@@ -110,10 +111,12 @@ export default function RadarView({
         if (typeof window !== 'undefined') {
           localStorage.setItem('stay_dine_last_coords', JSON.stringify(coords));
         }
+        alert('Location access granted successfully!');
       },
       (err) => {
         console.warn('GPS Denied/Unavailable:', err.message);
-        setGpsStatus('active'); // Keep active fallback coordinates so user doesn't have to re-click
+        setGpsStatus('denied'); // Show denied state
+        alert('Location access was denied or failed. Please check browser permissions.');
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
@@ -451,6 +454,14 @@ export default function RadarView({
               <h2 className="text-base font-bold text-[var(--text-primary)]">People Nearby</h2>
             </div>
             <div className="flex items-center gap-2">
+              <button
+                onClick={handleEnableRealGps}
+                className="px-3 py-1 text-[10px] sm:text-xs font-bold rounded-lg transition-colors border shadow-sm bg-[var(--bg-elevated)] text-[var(--text-secondary)] border-[var(--border-subtle)] hover:bg-[var(--bg-card)] flex items-center gap-1"
+                title="Refresh Location"
+              >
+                <MapPin className="h-3 w-3" />
+                {gpsStatus === 'locating' ? 'Locating...' : 'Get Location'}
+              </button>
               <span className="badge badge-blue font-bold">{filteredPeople.length} online</span>
               <button
                 onClick={() => setIsBroadcasting(!isBroadcasting)}
@@ -461,7 +472,7 @@ export default function RadarView({
                 }`}
                 title={isBroadcasting ? 'Hide yourself from radar' : 'Make yourself visible on radar'}
               >
-                {isBroadcasting ? '👻 Go Ghost' : '⚡ Go Live'}
+                {isBroadcasting ? '👻 Ghost' : '⚡ Live'}
               </button>
             </div>
           </div>
