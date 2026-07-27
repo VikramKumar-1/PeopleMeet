@@ -233,6 +233,12 @@ export default function Home() {
       setMessages((prev) => {
         // Prevent duplicate message entries
         if (prev.some((m) => m.id === incomingMsg.id)) return prev;
+
+        // Show live Toast Notification when a friend sends a message
+        if (incomingMsg.senderName && incomingMsg.senderId !== myProfileId) {
+          showToast(`💬 ${incomingMsg.senderName}: "${incomingMsg.text}"`);
+        }
+
         const updated = [...prev, incomingMsg];
         if (typeof window !== 'undefined') {
           localStorage.setItem('stay_dine_messages', JSON.stringify(updated));
@@ -241,7 +247,7 @@ export default function Home() {
       });
     });
     return () => { unsubscribe(); };
-  }, []);
+  }, [myProfileId]);
 
   const showToast = (text: string) => {
     setToastMessage(text);
