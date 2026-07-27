@@ -137,7 +137,7 @@ export default function ChatDrawer({
                       (msg.receiverId === 'general' && (msg.senderId === activeChatPerson.id || msg.senderName === activeChatPerson.name || msg.senderId === 'me' || (myProfileId && msg.senderId === myProfileId)))
                     )
                     .map((msg) => {
-                      const isMe = msg.senderId === 'me' || (myProfileId && msg.senderId === myProfileId) && msg.senderName !== activeChatPerson.name;
+                      const isMe = (myProfileId && msg.senderId === myProfileId) || (msg.senderId === 'me' && msg.senderName !== activeChatPerson.name);
                       return (
                         <div
                           key={msg.id}
