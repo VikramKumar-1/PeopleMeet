@@ -80,7 +80,14 @@ export default function Home() {
             });
           } else {
             const hasLocalProfile = localStorage.getItem('stay_dine_user_profile');
-            if (!hasLocalProfile) {
+            if (hasLocalProfile) {
+              try {
+                const parsed = JSON.parse(hasLocalProfile);
+                if (parsed?.id) {
+                  setMyProfileId(parsed.id);
+                }
+              } catch {}
+            } else {
               setMyProfileId(null);
               setIsAuthModalOpen(true); // Force onboarding only if completely unauthenticated
             }
@@ -388,11 +395,13 @@ export default function Home() {
   const handleSendMessage = (text: string) => {
     let myName = 'Vikash Kumar';
     let myAvatar = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80';
+    let actualMyId = myProfileId;
     if (typeof window !== 'undefined') {
       try {
         const profileRaw = localStorage.getItem('stay_dine_user_profile');
         if (profileRaw) {
           const p = JSON.parse(profileRaw);
+          if (p.id) actualMyId = p.id;
           if (p.full_name) myName = p.full_name;
           else if (p.fullName) myName = p.fullName;
           if (p.avatar_url) myAvatar = p.avatar_url;
@@ -403,7 +412,7 @@ export default function Home() {
 
     const newMsg: ChatMessage = {
       id: `m-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-      senderId: myProfileId || 'me',
+      senderId: actualMyId || 'me',
       receiverId: activeChatPerson?.id ?? 'general',
       text,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
