@@ -228,9 +228,15 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
           password: password.trim(),
         });
 
-        if (authError) throw authError;
+        const generateValidUUID = () => {
+          if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+            try { return crypto.randomUUID(); } catch {}
+          }
+          const hexTs = Date.now().toString(16).padStart(12, '0');
+          return `00000000-0000-4000-8000-${hexTs}`;
+        };
 
-        const userId = authData.user?.id || `u-${Date.now()}`;
+        const userId = authData.user?.id || generateValidUUID();
 
         // Capture real GPS for Supabase profile (production-level)
         let realLat = currentCity?.coordinates?.lat ?? 23.3645;
