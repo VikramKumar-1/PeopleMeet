@@ -272,8 +272,19 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
           console.warn('Profile upsert warning:', profileError.message);
         }
 
+        // 3. CRITICAL: Save profile to localStorage immediately so radar works
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('stay_dine_user_profile', JSON.stringify(newProfile));
+          // Track registered emails to prevent duplicate signups
+          const savedEmails = JSON.parse(localStorage.getItem('stay_dine_registered_emails') || '[]');
+          if (!savedEmails.includes(email.trim().toLowerCase())) {
+            savedEmails.push(email.trim().toLowerCase());
+            localStorage.setItem('stay_dine_registered_emails', JSON.stringify(savedEmails));
+          }
+        }
+
         if (onProfileCreated) onProfileCreated(newProfile);
-        setSuccessMsg('Profile registered inside Supabase! Welcome abroad!');
+        setSuccessMsg('Profile registered! You are now live on Radar 🚀');
         setTimeout(onClose, 1200);
 
       } else if (mode === 'edit') {

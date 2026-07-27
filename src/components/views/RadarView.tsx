@@ -209,7 +209,7 @@ export default function RadarView({
     }
 
     list = list.filter((p) => {
-      if (myId && (p.id === myId || p.id.includes(myId))) return false;
+      if (myId && p.id === myId) return false;
       if (myName && p.name.trim().toLowerCase() === myName) return false;
       if (myEmail && (p as any).email && (p as any).email.trim().toLowerCase() === myEmail) return false;
       return true;

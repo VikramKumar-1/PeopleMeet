@@ -38,36 +38,31 @@ export const fetchLiveProfiles = async (
   cityId: string,
   userLat?: number,
   userLng?: number
-): Promise<RadarPerson[] | null> => {
-  if (!supabase) return null;
+): Promise<RadarPerson[]> => {
+  if (!supabase) {
+    console.warn('[PeopleMeet] Supabase not connected — cannot fetch live profiles');
+    return [];
+  }
   try {
-    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    // Fetch ALL profiles for this city (no time cutoff — new users should appear immediately)
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('city_id', cityId);
 
-    let fetchedData = null;
-
-    // 1. Try high-performance PostGIS radial query if we have GPS (5000 meters = 5km)
-    if (userLat && userLng) {
-      const { data, error } = await supabase.rpc('get_nearby_users', {
-        lat: userLat,
-        lng: userLng,
-        radius_meters: 5000,
-      });
-      if (!error && data && data.length > 0) fetchedData = data;
+    if (error) {
+      console.error('[PeopleMeet] Supabase query error:', error.message);
+      return [];
     }
 
-    // 2. Fallback: Fetch by city_id if no GPS or RPC failed
-    if (!fetchedData) {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('city_id', cityId)
-        .gte('last_seen_at', cutoff);
-      if (!error && data) fetchedData = data;
+    if (!data || data.length === 0) {
+      console.log('[PeopleMeet] No profiles found for city:', cityId);
+      return [];
     }
 
-    if (!fetchedData || fetchedData.length === 0) return null;
+    console.log(`[PeopleMeet] Fetched ${data.length} profiles for city: ${cityId}`);
 
-    return fetchedData.map((item: any) => {
+    return data.map((item: any) => {
       const pLat = item.last_lat ?? item.lat ?? 0;
       const pLng = item.last_lng ?? item.lng ?? 0;
       const hasCoords = pLat !== 0 && pLng !== 0;
@@ -96,8 +91,8 @@ export const fetchLiveProfiles = async (
       } as RadarPerson;
     });
   } catch (e) {
-    console.error('Error fetching live profiles from Supabase:', e);
-    return null;
+    console.error('[PeopleMeet] Error fetching live profiles:', e);
+    return [];
   }
 };
 
@@ -118,16 +113,18 @@ export const updateUserLocation = async (
       .update({
         last_lat: lat,
         last_lng: lng,
-        location: `SRID=4326;POINT(${lng} ${lat})`, // PostGIS Geography format
         last_location_at: new Date().toISOString(),
         location_source: source,
         is_online: true,
         last_seen_at: new Date().toISOString(),
       })
       .eq('id', userId);
+    if (error) {
+      console.warn('[PeopleMeet] Location update warning:', error.message);
+    }
     return !error;
   } catch (e) {
-    console.error('Error updating user location:', e);
+    console.error('[PeopleMeet] Error updating user location:', e);
     return false;
   }
 };

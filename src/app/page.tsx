@@ -264,7 +264,9 @@ export default function Home() {
     isSupabaseReady() && targetCityId ? ['profiles', targetCityId, userCoords?.lat, userCoords?.lng] : null,
     ([, cityId, lat, lng]) => fetchLiveProfiles(cityId as string, lat as number, lng as number),
     { 
-      refreshInterval: 60000, // Background revalidate every minute
+      refreshInterval: 15000, // Revalidate every 15 seconds so new users appear quickly
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
     }
   );
 
@@ -272,8 +274,10 @@ export default function Home() {
     if (fetchedProfiles && fetchedProfiles.length > 0) {
       setLivePeopleList(fetchedProfiles);
       setIsLiveDatabaseActive(true);
-    } else if (fetchedProfiles?.length === 0) {
+    } else if (fetchedProfiles && fetchedProfiles.length === 0) {
+      // Database returned empty — still mark as active so we don't show stale data
       setLivePeopleList([]);
+      setIsLiveDatabaseActive(true);
     }
   }, [fetchedProfiles]);
 
@@ -455,11 +459,12 @@ export default function Home() {
       };
     });
 
-    // Get our own full profile details from state to guarantee we NEVER see ourselves
-    let myId = myProfileId || '';
+    // Get our own profile ID to exclude ourselves from the list
+    const myId = myProfileId || '';
 
     return calculatedList.filter((p) => {
-      if (myId && (p.id === myId || p.id.includes(myId))) return false;
+      // Strict equality only — never use includes() for UUID comparison
+      if (myId && p.id === myId) return false;
       return true;
     });
   }, [currentCity, livePeopleList, myProfileId, userCoords]);
