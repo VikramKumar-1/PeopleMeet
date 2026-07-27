@@ -97,11 +97,8 @@ export default function RadarView({
   const [gpsStatus, setGpsStatus] = useState<'idle' | 'locating' | 'active' | 'denied'>('active');
 
   const handleEnableRealGps = () => {
-    if (!typeof window || !navigator.geolocation) {
-      console.warn('Geolocation is not supported by your browser.');
-      alert('Location is not supported by your browser.');
-      return;
-    }
+  const handleEnableRealGps = () => {
+    if (typeof window === 'undefined' || !navigator.geolocation) return;
     setGpsStatus('locating');
     navigator.geolocation.getCurrentPosition(
       (pos) => {
@@ -111,12 +108,10 @@ export default function RadarView({
         if (typeof window !== 'undefined') {
           localStorage.setItem('stay_dine_last_coords', JSON.stringify(coords));
         }
-        alert('Location access granted successfully!');
       },
       (err) => {
         console.warn('GPS Denied/Unavailable:', err.message);
-        setGpsStatus('denied'); // Show denied state
-        alert('Location access was denied. Please go to your browser settings > Site Settings > Location and explicitly ALLOW it for this site.');
+        setGpsStatus('denied');
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
@@ -461,11 +456,11 @@ export default function RadarView({
             <div className="flex items-center gap-2">
               <button
                 onClick={handleEnableRealGps}
-                className="px-3 py-1 text-[10px] sm:text-xs font-bold rounded-lg transition-colors border shadow-sm bg-[var(--bg-elevated)] text-[var(--text-secondary)] border-[var(--border-subtle)] hover:bg-[var(--bg-card)] flex items-center gap-1"
-                title="Refresh Location"
+                className="px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-lg transition-colors border shadow-sm bg-[var(--bg-elevated)] text-[var(--text-secondary)] border-[var(--border-subtle)] hover:bg-[var(--bg-card)] flex items-center gap-1.5"
+                title="GPS Status - Click to refresh"
               >
-                <MapPin className="h-3 w-3" />
-                {gpsStatus === 'locating' ? 'Locating...' : 'Get Location'}
+                <span className={`h-2 w-2 rounded-full ${gpsStatus === 'active' ? 'bg-emerald-500 animate-pulse' : gpsStatus === 'locating' ? 'bg-amber-500 animate-ping' : 'bg-red-500'}`} />
+                <span>{gpsStatus === 'locating' ? 'Locating...' : gpsStatus === 'active' ? 'Live GPS' : 'Get GPS'}</span>
               </button>
               <span className="badge badge-blue font-bold">{filteredPeople.length} online</span>
               <button
