@@ -97,7 +97,6 @@ export default function RadarView({
   const [gpsStatus, setGpsStatus] = useState<'idle' | 'locating' | 'active' | 'denied'>('active');
 
   const handleEnableRealGps = () => {
-  const handleEnableRealGps = () => {
     if (typeof window === 'undefined' || !navigator.geolocation) return;
     setGpsStatus('locating');
     navigator.geolocation.getCurrentPosition(
