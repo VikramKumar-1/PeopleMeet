@@ -116,6 +116,24 @@ export default function RadarView({
     );
   };
 
+  const lastCoordsRef = useRef<{ lat: number; lng: number; time: number } | null>(null);
+
+  // Throttled GPS state updater to prevent high-frequency React re-renders on iPhone / Mobile
+  const updateGpsThrottled = (lat: number, lng: number) => {
+    const now = Date.now();
+    if (lastCoordsRef.current) {
+      const timeDiff = now - lastCoordsRef.current.time;
+      const dist = haversineDistance(lastCoordsRef.current.lat, lastCoordsRef.current.lng, lat, lng);
+      if (dist < 10 && timeDiff < 10000) return; // Skip minor jitter under 10m / 10s
+    }
+    lastCoordsRef.current = { lat, lng, time: now };
+    setUserCoords({ lat, lng });
+    setGpsStatus('active');
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('stay_dine_last_coords', JSON.stringify({ lat, lng }));
+    }
+  };
+
   // Automatically trigger real GPS silently on mount right away without requiring clicks
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -133,29 +151,15 @@ export default function RadarView({
       setGpsStatus('active');
     }
 
-    // Continuous Real-Time GPS Tracking ("chaahe bike ya fir walk toh wo 50 meter uske paas se calculate hote rehna chahiye")
+    // Lightweight GPS Tracking for Mobile (prevents iPhone battery drain & CPU overheating)
     let watchId: number | null = null;
     if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-          setUserCoords(coords);
-          setGpsStatus('active');
-          localStorage.setItem('stay_dine_last_coords', JSON.stringify(coords));
-        },
-        () => {},
-        { enableHighAccuracy: true, timeout: 6000, maximumAge: 60000 }
-      );
-
       watchId = navigator.geolocation.watchPosition(
         (pos) => {
-          const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-          setUserCoords(coords);
-          setGpsStatus('active');
-          localStorage.setItem('stay_dine_last_coords', JSON.stringify(coords));
+          updateGpsThrottled(pos.coords.latitude, pos.coords.longitude);
         },
         () => {},
-        { enableHighAccuracy: true, maximumAge: 3000 }
+        { enableHighAccuracy: false, maximumAge: 15000, timeout: 15000 }
       );
     }
     return () => { if (watchId !== null && 'geolocation' in navigator) navigator.geolocation.clearWatch(watchId); };
