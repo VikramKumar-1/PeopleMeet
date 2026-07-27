@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
-import { ShieldAlert, RefreshCw, Eye, EyeOff, UserPlus, Check, ChevronRight, MessageCircle, X, Users, Sparkles, Flame, MapPin, Search, Filter, ChevronDown, ChevronUp } from 'lucide-react';
+import { ShieldAlert, RefreshCw, Eye, EyeOff, UserPlus, Check, ChevronRight, MessageCircle, X, Users, Sparkles, Flame, MapPin, Search, Filter, ChevronDown, ChevronUp, AlertTriangle, Navigation } from 'lucide-react';
 import { RadarPerson, CityHub } from '@/types';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -116,7 +116,7 @@ export default function RadarView({
       (err) => {
         console.warn('GPS Denied/Unavailable:', err.message);
         setGpsStatus('denied'); // Show denied state
-        alert('Location access was denied or failed. Please check browser permissions.');
+        alert('Location access was denied. Please go to your browser settings > Site Settings > Location and explicitly ALLOW it for this site.');
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
@@ -452,6 +452,11 @@ export default function RadarView({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <h2 className="text-base font-bold text-[var(--text-primary)]">People Nearby</h2>
+              {gpsStatus === 'denied' && (
+                <span className="text-[10px] bg-red-500/10 text-red-500 px-1.5 py-0.5 rounded flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3" /> Blocked
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -476,7 +481,11 @@ export default function RadarView({
               </button>
             </div>
           </div>
-
+          {gpsStatus === 'denied' && (
+            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 mx-4 mb-2 text-xs text-red-400">
+              <strong>Location Blocked:</strong> Your browser denied location access. To see people, click the lock icon 🔒 in your address bar, allow Location, then refresh the page.
+            </div>
+          )}
 
 
           {/* Gender Filter */}
