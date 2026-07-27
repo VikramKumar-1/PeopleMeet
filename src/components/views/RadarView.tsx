@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { ShieldAlert, RefreshCw, Eye, EyeOff, UserPlus, Check, ChevronRight, MessageCircle, X, Users, Sparkles, Flame, MapPin, Search, Filter, ChevronDown, ChevronUp, AlertTriangle, Navigation } from 'lucide-react';
 import { RadarPerson, CityHub } from '@/types';
