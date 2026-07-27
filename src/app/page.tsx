@@ -498,7 +498,7 @@ export default function Home() {
         onToggleTheme={toggleTheme}
       />
 
-      <main className="flex-1 max-w-3xl w-full mx-auto px-4 pt-5 pb-28 md:bg-[var(--bg-primary)] md:border-x md:border-[var(--border-subtle)] md:shadow-2xl md:min-h-[calc(100vh-65px)] relative z-10">
+      <main className={`flex-1 max-w-3xl w-full mx-auto px-4 pt-5 pb-28 md:bg-[var(--bg-primary)] md:border-x md:border-[var(--border-subtle)] md:shadow-2xl md:min-h-[calc(100vh-65px)] relative z-10 ${!myProfileId ? 'blur-md pointer-events-none select-none opacity-40' : ''}`}>
         <AnimatePresence mode="wait">
           <motion.div key={`${activeTab}-${currentCity?.id || 'none'}`}
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
