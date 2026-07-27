@@ -682,7 +682,7 @@ export default function RadarView({
                   if (el) el.scrollIntoView({ behavior: 'smooth' });
                 }, 50);
               }}
-              className="absolute -bottom-5 left-1/2 -translate-x-1/2 px-5 py-2 rounded-full text-[11px] font-black shadow-xl flex items-center gap-2 transition-all z-10 whitespace-nowrap border border-[var(--glass-border)] backdrop-blur-md hover:scale-105"
+              className="absolute -bottom-12 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full text-[10px] font-black shadow-xl flex items-center gap-2 transition-all z-10 whitespace-nowrap border border-[var(--glass-border)] backdrop-blur-md hover:scale-105"
               style={{ background: 'var(--glass-bg)' }}
             >
               {showAllPeopleList ? (

@@ -23,7 +23,7 @@ export default function BottomNav({ activeTab, onChangeTab }: BottomNavProps) {
       {/* Mobile: Compact Floating Pill */}
       <div className="md:hidden fixed bottom-2 left-0 right-0 pointer-events-none flex justify-center px-4">
         <div
-          className="w-full max-w-sm flex items-center justify-around rounded-xl border border-[var(--glass-border)] shadow-lg px-1 py-1 backdrop-blur-md pointer-events-auto"
+          className="w-full max-w-sm flex items-center justify-around rounded-2xl border border-[var(--glass-border)] shadow-lg px-2 py-1.5 backdrop-blur-md pointer-events-auto"
           style={{ background: 'var(--glass-bg)' }}
         >
           {tabs.map((tab) => {
@@ -33,20 +33,20 @@ export default function BottomNav({ activeTab, onChangeTab }: BottomNavProps) {
               <button
                 key={tab.id}
                 onClick={() => onChangeTab(tab.id)}
-                className="relative flex flex-col items-center justify-center flex-1 py-1 rounded-lg transition-all active:scale-95"
+                className="relative flex flex-col items-center justify-center flex-1 py-1.5 rounded-xl transition-all active:scale-95"
               >
                 {isActive && (
                   <motion.div
                     layoutId="bottomTabPill"
-                    className="absolute inset-0 bg-[var(--bg-elevated)] rounded-lg opacity-90 border border-[var(--border-subtle)]"
+                    className="absolute inset-0 bg-[var(--bg-elevated)] rounded-xl opacity-90 border border-[var(--border-subtle)]"
                     transition={{ type: 'spring', stiffness: 500, damping: 35 }}
                   />
                 )}
                 <Icon
-                  className={`relative z-10 h-4 w-4 transition-colors ${isActive ? 'text-[var(--accent)]' : 'text-[var(--text-tertiary)]'}`}
+                  className={`relative z-10 h-5 w-5 transition-colors ${isActive ? 'text-[var(--accent)]' : 'text-[var(--text-tertiary)]'}`}
                   strokeWidth={isActive ? 2.5 : 1.8}
                 />
-                <span className={`relative z-10 text-[9px] font-bold tracking-tight transition-colors ${isActive ? 'text-[var(--text-primary)]' : 'text-[var(--text-tertiary)]'}`}>
+                <span className={`relative z-10 text-[10px] font-bold tracking-tight mt-0.5 transition-colors ${isActive ? 'text-[var(--text-primary)]' : 'text-[var(--text-tertiary)]'}`}>
                   {tab.label}
                 </span>
               </button>
