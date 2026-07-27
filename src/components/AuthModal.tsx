@@ -163,14 +163,18 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
-      document.body.style.touchAction = 'none';
+      // Added fixed positioning to prevent iOS background scroll bleed
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
     } else {
       document.body.style.overflow = '';
-      document.body.style.touchAction = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
     }
     return () => {
       document.body.style.overflow = '';
-      document.body.style.touchAction = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
     };
   }, [isOpen]);
 
@@ -329,9 +333,13 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
             .select('*')
             .eq('id', authData.user.id)
             .single();
-
-          if (profileData && onProfileCreated) {
-            onProfileCreated(profileData);
+          if (profileData) {
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('stay_dine_user_profile', JSON.stringify(profileData));
+            }
+            if (onProfileCreated) {
+              onProfileCreated(profileData);
+            }
           }
         }
         setSuccessMsg('Successfully signed in!');
@@ -372,7 +380,7 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
 
   return (
     <div
-      className="fixed inset-0 z-[110] flex items-center justify-center p-2 sm:p-4 bg-black/90 backdrop-blur-xl animate-fade-in font-outfit overflow-hidden touch-none"
+      className="fixed inset-0 z-[110] flex items-center justify-center p-0 sm:p-4 bg-black/90 backdrop-blur-xl animate-fade-in font-outfit overscroll-none"
       onClick={isMandatory ? undefined : onClose}
     >
       <motion.div
@@ -381,9 +389,9 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
         exit={{ scale: 0.95, y: 20, opacity: 0 }}
         transition={{ type: 'spring', stiffness: 350, damping: 28 }}
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-md my-auto max-h-[82vh] flex flex-col p-[1.5px] rounded-[24px] bg-gradient-to-b from-indigo-500/60 via-purple-500/30 to-pink-500/20 shadow-[0_20px_60px_-15px_rgba(124,58,237,0.4)] overflow-hidden"
+        className="relative w-full max-w-sm sm:max-w-md my-auto h-auto max-h-[85vh] flex flex-col p-[1px] sm:p-[1.5px] rounded-[24px] bg-gradient-to-b from-indigo-500/60 via-purple-500/30 to-pink-500/20 shadow-[0_20px_60px_-15px_rgba(124,58,237,0.4)] overflow-hidden shrink-0"
       >
-        <div className="relative w-full rounded-[23px] bg-[#090c15]/95 p-4 sm:p-5 backdrop-blur-xl overflow-y-auto max-h-[82vh] custom-scrollbar touch-pan-y pointer-events-auto">
+        <div className="relative w-full h-full rounded-[23px] bg-[#090c15]/95 p-4 sm:p-5 backdrop-blur-xl overflow-y-auto custom-scrollbar touch-pan-y pointer-events-auto">
           {/* Top glowing ambient accent */}
           <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-64 h-32 bg-gradient-to-r from-purple-600/30 via-indigo-600/30 to-pink-600/30 blur-3xl pointer-events-none" />
 
@@ -590,7 +598,7 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-300 mb-1.5 flex items-center">
+                  <label className="block text-sm font-semibold text-slate-300 mb-1 flex items-center">
                     <span>Full Name</span>
                     <span className="text-red-400 ml-1">*</span>
                   </label>
@@ -609,14 +617,14 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-semibold text-slate-300 mb-1.5 flex items-center">
+                    <label className="block text-sm font-semibold text-slate-300 mb-1 flex items-center">
                       <span>Gender</span>
                       <span className="text-red-400 ml-1">*</span>
                     </label>
                     <select
                       value={gender}
                       onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setGender(e.target.value as 'Boys' | 'Girls' | 'Others')}
-                      className="w-full px-3.5 py-2 text-[16px] sm:text-xs bg-black/50 border border-white/10 rounded-xl text-white font-semibold focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all cursor-pointer"
+                      className="w-full px-3.5 py-1.5 text-[15px] sm:text-xs bg-black/50 border border-white/10 rounded-xl text-white font-semibold focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all cursor-pointer"
                     >
                       <option value="Boys" className="bg-[#090c15]">Boys / Male</option>
                       <option value="Girls" className="bg-[#090c15]">Girls / Female</option>
@@ -625,7 +633,7 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
                   </div>
 
                   <div>
-                    <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center justify-between mb-1">
                       <label className="block text-sm font-semibold text-slate-300 truncate flex items-center">
                         <span>Locality</span>
                         <span className="text-red-400 ml-1">*</span>
@@ -649,7 +657,7 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
                         placeholder="e.g. Rajiv Nagar Lane 4"
                         value={locality}
                         onChange={(e) => setLocality(e.target.value)}
-                        className="w-full pl-8 pr-3 py-2 text-[16px] sm:text-xs bg-black/50 border border-white/10 rounded-xl text-white font-semibold placeholder:text-slate-600 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
+                        className="w-full pl-8 pr-3 py-1.5 text-[15px] sm:text-xs bg-black/50 border border-white/10 rounded-xl text-white font-semibold placeholder:text-slate-600 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
                       />
                     </div>
                   </div>
@@ -675,7 +683,7 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
             {(mode === 'signup' || mode === 'login') && (
               <div className="p-3 rounded-2xl bg-black/40 border border-white/10 space-y-3 shadow-inner">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-300 mb-1.5 flex items-center">
+                  <label className="block text-sm font-semibold text-slate-300 mb-1 flex items-center">
                     <span>Email Address</span>
                     <span className="text-red-400 ml-1">*</span>
                   </label>
@@ -687,13 +695,13 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
                       placeholder="you@gmail.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 text-[16px] sm:text-sm bg-black/50 border border-white/10 rounded-xl text-white font-semibold placeholder:text-slate-600 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
+                      className="w-full pl-10 pr-4 py-1.5 text-[15px] sm:text-sm bg-black/50 border border-white/10 rounded-xl text-white font-semibold placeholder:text-slate-600 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-300 mb-1.5 flex items-center">
+                  <label className="block text-sm font-semibold text-slate-300 mb-1 flex items-center">
                     <span>Password</span>
                     <span className="text-red-400 ml-1">*</span>
                   </label>
@@ -706,7 +714,7 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
                       placeholder="Min 6 characters"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 text-[16px] sm:text-sm bg-black/50 border border-white/10 rounded-xl text-white font-semibold placeholder:text-slate-600 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
+                      className="w-full pl-10 pr-4 py-1.5 text-[15px] sm:text-sm bg-black/50 border border-white/10 rounded-xl text-white font-semibold placeholder:text-slate-600 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
                     />
                   </div>
                 </div>

@@ -66,12 +66,34 @@ export default function Home() {
 
       if (supabase) {
         // Fetch current active session
-        supabase.auth.getSession().then(({ data: { session } }) => {
+        supabase.auth.getSession().then(async ({ data: { session } }) => {
           if (session?.user) {
             const uid = session.user.id;
             setMyProfileId(uid);
             setIsAuthModalOpen(false);
             
+            // Sync Profile to localStorage if missing (fixes "Anonymous" user issue)
+            if (typeof window !== 'undefined' && !localStorage.getItem('stay_dine_user_profile')) {
+              const { data: profile } = await supabase?.from('profiles').select('*').eq('id', uid).single() || { data: null };
+              if (profile) {
+                localStorage.setItem('stay_dine_user_profile', JSON.stringify(profile));
+              } else {
+                // Auto-create missing profile for Google Auth or incomplete sign-ups
+                const meta = session.user.user_metadata || {};
+                const newProfile = {
+                  id: uid,
+                  email: session.user.email || '',
+                  full_name: meta.full_name || meta.name || 'Google User',
+                  avatar_url: meta.avatar_url || meta.picture || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+                  gender: 'Others',
+                  is_online: true,
+                  last_seen_at: new Date().toISOString()
+                };
+                await supabase?.from('profiles').upsert(newProfile, { onConflict: 'id' });
+                localStorage.setItem('stay_dine_user_profile', JSON.stringify(newProfile));
+              }
+            }
+
             fetchSentFriendRequestsFromDb(uid).then(reqs => {
                if (reqs.length > 0) {
                  setFriendRequestsSent(reqs);
@@ -95,10 +117,32 @@ export default function Home() {
         });
 
         // Listen for live auth changes (login/logout)
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
           if (session?.user) {
-            setMyProfileId(session.user.id);
+            const uid = session.user.id;
+            setMyProfileId(uid);
             setIsAuthModalOpen(false);
+            
+            if (typeof window !== 'undefined' && !localStorage.getItem('stay_dine_user_profile')) {
+              const { data: profile } = await supabase?.from('profiles').select('*').eq('id', uid).single() || { data: null };
+              if (profile) {
+                localStorage.setItem('stay_dine_user_profile', JSON.stringify(profile));
+              } else {
+                // Auto-create missing profile for Google Auth or incomplete sign-ups
+                const meta = session.user.user_metadata || {};
+                const newProfile = {
+                  id: uid,
+                  email: session.user.email || '',
+                  full_name: meta.full_name || meta.name || 'Google User',
+                  avatar_url: meta.avatar_url || meta.picture || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+                  gender: 'Others',
+                  is_online: true,
+                  last_seen_at: new Date().toISOString()
+                };
+                await supabase?.from('profiles').upsert(newProfile, { onConflict: 'id' });
+                localStorage.setItem('stay_dine_user_profile', JSON.stringify(newProfile));
+              }
+            }
           } else if (event === 'SIGNED_OUT') {
             setMyProfileId(null);
             setIsAuthModalOpen(true);
