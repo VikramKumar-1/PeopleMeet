@@ -350,7 +350,7 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
 
   return (
     <div
-      className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in font-outfit"
+      className="fixed inset-0 z-[110] flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-md animate-fade-in font-outfit overflow-hidden"
       onClick={isMandatory ? undefined : onClose}
     >
       <motion.div
@@ -359,9 +359,9 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
         exit={{ scale: 0.95, y: 20, opacity: 0 }}
         transition={{ type: 'spring', stiffness: 350, damping: 28 }}
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-md p-[1.5px] rounded-[28px] bg-gradient-to-b from-indigo-500/60 via-purple-500/30 to-pink-500/20 shadow-[0_20px_60px_-15px_rgba(124,58,237,0.4)] overflow-hidden"
+        className="relative w-full max-w-md my-auto max-h-[85vh] flex flex-col p-[1.5px] rounded-[24px] bg-gradient-to-b from-indigo-500/60 via-purple-500/30 to-pink-500/20 shadow-[0_20px_60px_-15px_rgba(124,58,237,0.4)] overflow-hidden"
       >
-        <div className="relative w-full rounded-[27px] bg-[#090c15]/95 p-4 sm:p-7 backdrop-blur-xl overflow-y-auto max-h-[90vh]">
+        <div className="relative w-full rounded-[23px] bg-[#090c15]/95 p-4 sm:p-5 backdrop-blur-xl overflow-y-auto max-h-[85vh] custom-scrollbar">
           {/* Top glowing ambient accent */}
           <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-64 h-32 bg-gradient-to-r from-purple-600/30 via-indigo-600/30 to-pink-600/30 blur-3xl pointer-events-none" />
 
