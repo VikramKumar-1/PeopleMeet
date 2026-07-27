@@ -323,11 +323,6 @@ export const sendRealtimeMessage = async (msg: ChatMessage): Promise<void> => {
   }
 };
 
-let isSubscribed = false;
-
-/**
- * Subscribe to incoming peer-to-peer real-time messages.
- */
 export const subscribeToRealtimeChat = (onReceiveMessage: (msg: ChatMessage) => void): (() => void) => {
   if (typeof window !== 'undefined') {
     try {
@@ -340,39 +335,41 @@ export const subscribeToRealtimeChat = (onReceiveMessage: (msg: ChatMessage) => 
     } catch {}
   }
 
-  if (supabase && !isSubscribed) {
-    try {
-      if (!sharedChatChannel) {
-        sharedChatChannel = supabase.channel('campus_live_chat_channel');
-      }
-      
-      sharedChatChannel.on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages' },
-        (payload: any) => {
-          const m = payload.new;
-          if (m && m.id) {
-            onReceiveMessage({
-              id: m.id,
-              senderId: m.sender_id,
-              receiverId: m.receiver_id,
-              text: m.text,
-              timestamp: m.timestamp,
-              isRead: m.is_read,
-              senderName: m.sender_name,
-              senderAvatar: m.sender_avatar
-            });
-          }
+  if (!supabase) return () => {};
+
+  const channelId = `realtime_chat_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const channel = supabase.channel(channelId);
+
+  try {
+    channel.on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'messages' },
+      (payload: any) => {
+        const m = payload.new;
+        if (m && m.id) {
+          onReceiveMessage({
+            id: m.id,
+            senderId: m.sender_id,
+            receiverId: m.receiver_id,
+            text: m.text,
+            timestamp: m.timestamp,
+            isRead: m.is_read,
+            senderName: m.sender_name,
+            senderAvatar: m.sender_avatar
+          });
         }
-      );
-      
-      sharedChatChannel.subscribe();
-      isSubscribed = true;
-    } catch {}
+      }
+    ).subscribe();
+  } catch (e) {
+    console.error('Error subscribing to realtime chat:', e);
   }
 
   return () => {
-    // Keep channel alive but prevent double attachment in strict mode
+    try {
+      if (supabase && channel) {
+        supabase.removeChannel(channel);
+      }
+    } catch {}
   };
 };
 
@@ -385,10 +382,13 @@ export const fetchMessagesFromDb = async (userId1: string, userId2: string): Pro
     const { data, error } = await supabase
       .from('messages')
       .select('*')
-      .or(`and(sender_id.eq.${userId1},receiver_id.eq.${userId2}),and(sender_id.eq.${userId2},receiver_id.eq.${userId1})`)
+      .or(`and(sender_id.eq.${userId1},receiver_id.eq.${userId2}),and(sender_id.eq.${userId2},receiver_id.eq.${userId1}),receiver_id.eq.${userId1},sender_id.eq.${userId1},receiver_id.eq.me,sender_id.eq.me`)
       .order('created_at', { ascending: true });
 
-    if (error || !data) return [];
+    if (error || !data) {
+      if (error) console.error('Fetch messages error:', error);
+      return [];
+    }
     
     return data.map(m => ({
       id: m.id,
