@@ -343,16 +343,28 @@ export const subscribeToRealtimeChat = (onReceiveMessage: (msg: ChatMessage) => 
   if (supabase && !isSubscribed) {
     try {
       if (!sharedChatChannel) {
-        sharedChatChannel = supabase.channel('campus_live_chat_channel', {
-          config: { broadcast: { ack: false, self: true } }
-        });
+        sharedChatChannel = supabase.channel('campus_live_chat_channel');
       }
       
-      sharedChatChannel.on('broadcast', { event: 'NEW_CHAT_MESSAGE' }, (payload: any) => {
-        if (payload && payload.payload && payload.payload.id) {
-          onReceiveMessage(payload.payload);
+      sharedChatChannel.on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages' },
+        (payload: any) => {
+          const m = payload.new;
+          if (m && m.id) {
+            onReceiveMessage({
+              id: m.id,
+              senderId: m.sender_id,
+              receiverId: m.receiver_id,
+              text: m.text,
+              timestamp: m.timestamp,
+              isRead: m.is_read,
+              senderName: m.sender_name,
+              senderAvatar: m.sender_avatar
+            });
+          }
         }
-      });
+      );
       
       sharedChatChannel.subscribe();
       isSubscribed = true;
