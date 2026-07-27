@@ -1,10 +1,8 @@
 'use client';
 
 import React from 'react';
-import { MapPin, MessageCircle, Plus, User, Sun, Moon, ScanSearch, BedDouble, UtensilsCrossed } from 'lucide-react';
+import { MapPin, MessageCircle, Plus, User, Sun, Moon } from 'lucide-react';
 import { CityHub } from '@/types';
-import { TabType } from '@/components/BottomNav';
-import { motion } from 'framer-motion';
 
 interface NavbarProps {
   currentCity: CityHub | null;
@@ -15,15 +13,7 @@ interface NavbarProps {
   unreadCount?: number;
   isDark: boolean;
   onToggleTheme: () => void;
-  activeTab: TabType;
-  onChangeTab: (tab: TabType) => void;
 }
-
-const tabs: { id: TabType; label: string; icon: React.ElementType }[] = [
-  { id: 'radar', label: 'Find Near People', icon: ScanSearch },
-  { id: 'stay', label: 'Stay', icon: BedDouble },
-  { id: 'tiffin', label: 'Tiffin/Mess', icon: UtensilsCrossed },
-];
 
 export default function Navbar({
   currentCity,
@@ -34,11 +24,9 @@ export default function Navbar({
   unreadCount = 0,
   isDark,
   onToggleTheme,
-  activeTab,
-  onChangeTab,
 }: NavbarProps) {
   return (
-    <header className="sticky top-0 z-40 w-full pt-safe flex flex-col pointer-events-none">
+    <header className="sticky top-0 z-40 w-full flex flex-col pointer-events-none">
       {/* Main Top Navbar */}
       <div
         className="w-full pointer-events-auto border-b border-[var(--border-subtle)] shadow-sm"
@@ -87,33 +75,6 @@ export default function Navbar({
               <User className="h-5 w-5" />
             </button>
           </div>
-        </div>
-
-        {/* Top Navigation Tabs (Find Near People | Stay | Tiffin/Mess) */}
-        <div className="max-w-3xl mx-auto flex items-center justify-around sm:justify-center gap-1 px-2 pb-2">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => onChangeTab(tab.id)}
-                className={`relative flex items-center gap-1.5 px-3 sm:px-5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-                  isActive ? 'text-[var(--text-primary)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
-                }`}
-              >
-                {isActive && (
-                  <motion.div
-                    layoutId="topTabPill"
-                    className="absolute inset-0 bg-[var(--bg-elevated)] rounded-xl border border-[var(--border-subtle)]"
-                    transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-                  />
-                )}
-                <Icon className={`relative z-10 h-4 w-4 ${isActive ? 'text-[var(--accent)]' : ''}`} strokeWidth={isActive ? 2.5 : 1.8} />
-                <span className="relative z-10">{tab.label}</span>
-              </button>
-            );
-          })}
         </div>
       </div>
 

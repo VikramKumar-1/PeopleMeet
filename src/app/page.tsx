@@ -496,11 +496,6 @@ export default function Home() {
         unreadCount={friendRequestsSent.length > 0 ? 0 : 1}
         isDark={isDark}
         onToggleTheme={toggleTheme}
-        activeTab={activeTab}
-        onChangeTab={(tab) => {
-          setActiveTab(tab);
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }}
       />
 
       <main className="flex-1 max-w-3xl w-full mx-auto px-4 pt-5 pb-28 md:bg-[var(--bg-primary)] md:border-x md:border-[var(--border-subtle)] md:shadow-2xl md:min-h-[calc(100vh-65px)] relative z-10">
