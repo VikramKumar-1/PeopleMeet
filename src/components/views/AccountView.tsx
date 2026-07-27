@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { MapPin, Sparkles, MessageCircle, ChevronRight, ShieldCheck, UserCheck, LogIn, Edit3 } from 'lucide-react';
+import { MapPin, Sparkles, MessageCircle, ChevronRight, ShieldCheck, UserCheck, LogIn, Edit3, LogOut } from 'lucide-react';
 import { CityHub, RadarPerson } from '@/types';
 import AuthModal from '@/components/AuthModal';
+import { supabase, markUserOffline } from '@/utils/supabase';
 
 interface AccountViewProps {
   currentCity: CityHub;
@@ -27,6 +28,23 @@ export default function AccountView({ currentCity, onOpenListModal, friendReques
     }
   }, []);
 
+  const handleLogout = async () => {
+    if (confirm('Are you sure you want to log out?')) {
+      if (userProfile?.id) {
+        await markUserOffline(userProfile.id);
+      }
+      if (supabase) {
+        try { await supabase.auth.signOut(); } catch {}
+      }
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('stay_dine_user_profile');
+        localStorage.removeItem('stay_dine_messages');
+        localStorage.removeItem('stay_dine_friend_requests');
+        window.location.reload();
+      }
+    }
+  };
+
   return (
     <div className="space-y-5">
       {/* Profile Card */}
@@ -49,13 +67,24 @@ export default function AccountView({ currentCity, onOpenListModal, friendReques
             </div>
           </div>
 
-          <button
-            onClick={() => setIsAuthModalOpen(true)}
-            className="p-2.5 rounded-xl bg-[var(--bg-elevated)] hover:bg-[var(--accent)] hover:text-white text-[var(--text-secondary)] transition-all shrink-0 border border-[var(--border-subtle)]"
-            title={userProfile ? "Edit Profile" : "Sign In / Register"}
-          >
-            {userProfile ? <Edit3 className="h-5 w-5" /> : <LogIn className="h-5 w-5" />}
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            {userProfile && (
+              <button
+                onClick={handleLogout}
+                className="p-2.5 rounded-xl bg-red-500/10 hover:bg-red-500 hover:text-white text-red-500 transition-all border border-red-500/20"
+                title="Log Out"
+              >
+                <LogOut className="h-5 w-5" />
+              </button>
+            )}
+            <button
+              onClick={() => setIsAuthModalOpen(true)}
+              className="p-2.5 rounded-xl bg-[var(--bg-elevated)] hover:bg-[var(--accent)] hover:text-white text-[var(--text-secondary)] transition-all border border-[var(--border-subtle)]"
+              title={userProfile ? "Edit Profile" : "Sign In / Register"}
+            >
+              {userProfile ? <Edit3 className="h-5 w-5" /> : <LogIn className="h-5 w-5" />}
+            </button>
+          </div>
         </div>
 
         {userProfile?.bio && (
