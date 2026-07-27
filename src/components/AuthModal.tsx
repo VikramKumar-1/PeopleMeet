@@ -718,6 +718,8 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
                 <span className="flex items-center gap-2">
                   <span className="animate-spin text-base">⏳</span> Connecting to Radar...
                 </span>
+              ) : mode === 'edit' ? (
+                <><Check className="h-4 w-4" /> Save Profile Changes ✨</>
               ) : mode === 'signup' ? (
                 <><UserPlus className="h-4 w-4" /> Create Profile & Go Live on Radar ⚡</>
               ) : (
