@@ -304,14 +304,14 @@ export default function RadarView({
     // Formed of 2 distinct rings (Inner ring @ 26% radius, Outer ring @ 38% radius)
     // Angles are staggered so no two pins ever overlap or touch each other!
     const ORBITAL_SLOTS = [
-      { radiusPercent: 26, angleDeg: 35 },
-      { radiusPercent: 26, angleDeg: 155 },
-      { radiusPercent: 26, angleDeg: 275 },
-      { radiusPercent: 38, angleDeg: 95 },
-      { radiusPercent: 38, angleDeg: 215 },
-      { radiusPercent: 38, angleDeg: 335 },
-      { radiusPercent: 34, angleDeg: 10 },
-      { radiusPercent: 34, angleDeg: 190 },
+      { radiusPercent: 20, angleDeg: 35 },
+      { radiusPercent: 20, angleDeg: 155 },
+      { radiusPercent: 20, angleDeg: 275 },
+      { radiusPercent: 28, angleDeg: 95 },
+      { radiusPercent: 28, angleDeg: 215 },
+      { radiusPercent: 28, angleDeg: 335 },
+      { radiusPercent: 24, angleDeg: 10 },
+      { radiusPercent: 24, angleDeg: 190 },
     ];
 
     const pins = topIndividuals.map((p, idx) => {
@@ -524,8 +524,8 @@ export default function RadarView({
           )}
         </div>
 
-        {/* 360 Radar Circle ("in desktop bada karo radar ko halka") */}
-        <div className="relative w-full aspect-square max-w-[340px] md:max-w-[440px] mx-auto my-6 flex items-center justify-center overflow-visible">
+        {/* 360 Radar Circle */}
+        <div className="relative w-full aspect-square max-w-[320px] sm:max-w-[360px] md:max-w-[420px] mx-auto my-10 pt-2 flex items-center justify-center">
           <div className="relative w-full h-full rounded-full border border-[var(--border-subtle)] flex items-center justify-center bg-[var(--bg-elevated)]/30 shadow-inner">
             <div className="absolute inset-0 rounded-full border border-[var(--border-subtle)]" />
             <div className="absolute inset-[26%] rounded-full border border-[var(--border-subtle)]" />
