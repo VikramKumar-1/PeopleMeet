@@ -652,19 +652,20 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-slate-300 mb-1.5">
-                    Short Bio (Exams, Needs, etc.)
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. BPSC Target 2026. Looking for room partner near library!"
-                    value={bio}
-                    onChange={(e) => setBio(e.target.value)}
-                    className="w-full px-4 py-2 text-[16px] sm:text-xs bg-black/50 border border-white/10 rounded-xl text-white font-medium placeholder:text-slate-600 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
-                  />
-                </div>
+                {mode === 'edit' && (
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                      Short Bio (Exams, Needs, etc.)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. BPSC Target 2026. Looking for room partner near library!"
+                      value={bio}
+                      onChange={(e) => setBio(e.target.value)}
+                      className="w-full px-3 py-1.5 text-xs bg-black/50 border border-white/10 rounded-xl text-white font-medium placeholder:text-slate-600 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
+                    />
+                  </div>
+                )}
               </>
             )}
 
@@ -721,7 +722,7 @@ export default function AuthModal({ isOpen, onClose, onProfileCreated, isMandato
               ) : mode === 'edit' ? (
                 <><Check className="h-4 w-4" /> Save Profile Changes ✨</>
               ) : mode === 'signup' ? (
-                <><UserPlus className="h-4 w-4" /> Create Profile & Go Live on Radar ⚡</>
+                <><UserPlus className="h-4 w-4" /> Create Profile & Go Live ⚡</>
               ) : (
                 <><LogIn className="h-4 w-4" /> Sign In to PeopleMeet 🎯</>
               )}
