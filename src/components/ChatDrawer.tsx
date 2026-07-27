@@ -132,12 +132,12 @@ export default function ChatDrawer({
 
                   {messages
                     .filter((msg) => 
-                      (msg.senderId === activeChatPerson.id && (msg.receiverId === 'me' || (myProfileId && msg.receiverId === myProfileId) || msg.receiverId === 'general')) ||
-                      ((msg.senderId === 'me' || (myProfileId && msg.senderId === myProfileId)) && msg.receiverId === activeChatPerson.id) ||
-                      (msg.receiverId === 'general' && (msg.senderId === activeChatPerson.id || msg.senderId === 'me' || (myProfileId && msg.senderId === myProfileId)))
+                      ((msg.senderId === activeChatPerson.id || msg.senderName === activeChatPerson.name) && (msg.receiverId === 'me' || (myProfileId && msg.receiverId === myProfileId) || msg.receiverId === 'general')) ||
+                      ((msg.senderId === 'me' || (myProfileId && msg.senderId === myProfileId)) && (msg.receiverId === activeChatPerson.id || msg.receiverId === 'me')) ||
+                      (msg.receiverId === 'general' && (msg.senderId === activeChatPerson.id || msg.senderName === activeChatPerson.name || msg.senderId === 'me' || (myProfileId && msg.senderId === myProfileId)))
                     )
                     .map((msg) => {
-                      const isMe = msg.senderId === 'me' || (myProfileId && msg.senderId === myProfileId);
+                      const isMe = msg.senderId === 'me' || (myProfileId && msg.senderId === myProfileId) && msg.senderName !== activeChatPerson.name;
                       return (
                         <div
                           key={msg.id}
